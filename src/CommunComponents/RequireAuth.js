@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Route, Redirect, useHistory } from "react-router-dom";
 import ApiLinks from "../Context/ApiLinks";
 import { Routes } from "../Context/routes";
@@ -10,6 +10,9 @@ function RequireAuth({ children, ...rest }) {
   const navigate = useHistory();
   const { Auth, setAuth, setProfile } = useAuth(); // ** user id
   const Token = localStorage.getItem("Token"); // ** token
+  useEffect(() => {
+    validateClient();
+  }, []);
   const validateClient = async () => {
     await axios
       .get(ApiLinks.Auth.verifyUser, {
@@ -25,14 +28,15 @@ function RequireAuth({ children, ...rest }) {
         }
       })
       .catch((error) => {
-        console.log("error: ", error);
         // 401
         if (error?.response?.status === 401) {
-          setAuth(null);
+          navigate.push(Routes.Signin.path);
+          /* setAuth(null); */
         }
         // 403
         else if (error?.response?.status === 403) {
-          setAuth(null);
+          navigate.push(Routes.Signin.path);
+          /* setAuth(null); */
         }
         // 500
         else if (error?.response?.status === 500) {
@@ -40,10 +44,7 @@ function RequireAuth({ children, ...rest }) {
         }
       });
   };
-  useEffect(() => {
-    validateClient();
-  }, []);
-
+  // ** ==>
   return (
     <Route
       {...rest}

@@ -153,7 +153,7 @@ export const CounterWidget = (props) => {
 
 export const CircleChartWidget = (props) => {
   const { title, data = [] } = props;
-  console.log("data inside: ", data);
+
   const series = data.map((d) => d.value);
 
   return (
@@ -421,9 +421,7 @@ export const RankingWidget = () => {
 
 export const SalesValueWidget = (props) => {
   const { title, value, percentage } = props;
-  console.log("title: ", title);
-  console.log("value: ", value);
-  console.log("percentage: ", percentage);
+
   const percentageIcon = percentage < 0 ? faAngleDown : faAngleUp;
   const percentageColor = percentage < 0 ? "text-danger" : "text-success";
 

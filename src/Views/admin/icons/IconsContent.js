@@ -1,51 +1,50 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-//--------------------------------------------------------------
+// ** API config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
-import axios from "../../../Context/Axios";
-/* import useAuth from "../../../Context/useAuth"; */
-import { BASE_PATH } from "../../../Context/Axios";
-//--------------------------------------------------------------
+import axios, { BASE_PATH } from "../../../Context/Axios";
+// ** icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSearch,
-  /* faEdit,
-  faEye, */
-  faTrashAlt,
-} from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+// ** bootstrap
 import {
   Col,
   Row,
   Nav,
   Card,
   Table,
-  /*  Pagination, */
   Form,
   InputGroup,
   OverlayTrigger,
   Tooltip,
-  /*   Button, */
   Image,
-  /* Spinner, */
 } from "@themesberg/react-bootstrap";
+// ** Modals
 import DeleteIconModal from "./DeleteIconModal";
 import AddIconModal from "./AddIconModal";
 //--------------------------------------------------------------
 function IconsContent() {
+  // ** router
   const Token = localStorage.getItem("Token");
   const navigate = useHistory();
-  //--------------------------------------------------------------
+  // ** initial state
+  let pagesNumber = [];
+  // ** states
   const [icons, setIcons] = useState([]);
   const [rowPerPage, setRowPerPage] = useState(1);
   const [limitPerPage, setLimitPerPage] = useState(30);
   const [iconsNumber, setIconsNumber] = useState(0);
-  //--------------------------------------------------------------
-  let pagesNumber = [];
+  const [selectedIcon, setSelectedIcon] = useState("");
   for (let i = 1; i < iconsNumber / limitPerPage + 1; i++) {
     pagesNumber.push(i);
   }
-  //--------------------------------------------------------------
+  // ** fetching data
+  useEffect(() => {
+    getAllIcons();
+  }, [rowPerPage]);
+  // ** functions
   const getAllIcons = async () => {
     await axios
       .get(ApiLinks.Icons.getDefault, {
@@ -60,10 +59,10 @@ function IconsContent() {
       })
       .catch((err) => {
         if (err?.reponse?.status === 401) {
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.reponse?.status === 403) {
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.reponse?.status === 404) {
           navigate.push(Routes.NotFound.path);
@@ -73,7 +72,7 @@ function IconsContent() {
         }
       });
   };
-  //--------------------------------------------------------------
+  // ** pagination management
   /* const PaginatePage = (pageNumber) => {
     setRowPerPage((prev) => pageNumber);
     getAllIcons();
@@ -88,17 +87,9 @@ function IconsContent() {
       setRowPerPage((prev) => prev + 1);
     }
   }; */
-  //---------------------------------------------------------------------
+  // ** modals management
   const [showAddIconModal, setShowAddIconModal] = useState(false);
   const [showDeleteIconModal, setShowDeleteIconModal] = useState(false);
-  const [showUpdateIconModal, setShowUpdateIconModal] = useState(false);
-  //---------------------------------------------------------------------
-  useEffect(() => {
-    getAllIcons();
-  }, [rowPerPage, showAddIconModal, showDeleteIconModal, showUpdateIconModal]);
-  //---------------------------------------------------------------------
-  const [selectedIcon, setSelectedIcon] = useState("");
-  //---------------------------------------------------------------------
   const handleDeleteIconModal = (id) => {
     setSelectedIcon((prev) => id);
     setShowDeleteIconModal(true);
@@ -110,7 +101,7 @@ function IconsContent() {
       path.substring(path.search("Default/") + "Default/".length));
     return name;
   };
-  //---------------------------------------------------------------------
+  // ** ==>
   return (
     <>
       <div className="table-settings mb-4">
@@ -163,15 +154,14 @@ function IconsContent() {
             </thead>
             <tbody>
               {icons.map((icon) => {
-                const { path } = icon;
                 const id = icons.indexOf(icon);
                 return (
                   <tr key={id}>
                     <td className="fw-normal">{id}</td>
-                    <td>{getIconName(path)}</td>
+                    <td>{getIconName(icon.path)}</td>
                     <td>
                       <Image
-                        src={BASE_PATH + path}
+                        src={BASE_PATH + icon.path}
                         style={{ height: "50px" }}
                       />
                     </td>
@@ -183,7 +173,7 @@ function IconsContent() {
                       >
                         <button
                           className="btn btn-danger p-2 ms-2"
-                          onClick={() => handleDeleteIconModal(path)}
+                          onClick={() => handleDeleteIconModal(icon.path)}
                         >
                           <FontAwesomeIcon
                             icon={faTrashAlt}
@@ -228,22 +218,24 @@ function IconsContent() {
                 </Pagination.Next>
               </Pagination> */}
             </Nav>
-            <small className="fw-bold">
+            {/* <small className="fw-bold">
               Showing <b>{icons.length}</b> out of
               <b>{" " + iconsNumber + " "}</b>
               entries
-            </small>
+            </small> */}
           </Card.Footer>
         </Card.Body>
       </Card>
       <AddIconModal
         showAddIconModal={showAddIconModal}
         setShowAddIconModal={setShowAddIconModal}
+        refresh={getAllIcons}
       />
       <DeleteIconModal
         showDeleteIconModal={showDeleteIconModal}
         setShowDeleteIconModal={setShowDeleteIconModal}
         selectedIcon={selectedIcon}
+        refresh={getAllIcons}
       />
     </>
   );

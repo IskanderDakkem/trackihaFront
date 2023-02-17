@@ -1,18 +1,20 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Modal,
   Button,
   Form,
   InputGroup,
-  Alert,
   Spinner,
 } from "@themesberg/react-bootstrap";
+import { FormFeedback } from "reactstrap";
+// ** icons imports
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-//----------------------------------------------------------------
+// ** API config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { Routes } from "../../../../Context/routes";
@@ -23,138 +25,119 @@ function UpdateSequenceModal({
   setShowUpdateSequenceModal,
   setShowUpdateSequenceToast,
   SelectedSequence,
+  refresh,
 }) {
+  // ** router
   const Token = localStorage.getItem("Token");
   const { Auth, setAuth } = useAuth();
   const navigate = useHistory();
+  // ** states
   const [spinningButton, setSpinningButton] = useState(false);
-  //---------------------------------------------------------------
-  //getting all the steps
   const [Steps, setSteps] = useState([]);
-  const getUserSteps = async () => {
-    await axios
-      .get(ApiLinks.Steps.getAllUserSteps + Auth, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        const { data, status } = res;
-        if (status === 200) {
-          const { Steps } = data;
-          setSteps((prev) => [...Steps]);
-        }
-      })
-      .catch((err) => {
-        if (err?.response?.status === 400) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 401) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
-  };
-  useEffect(() => {
-    if (Auth !== null && Auth !== 0) {
-      getUserSteps();
-    }
-    getUserSteps();
-  }, [showUpdateSequenceModal, SelectedSequence]);
-  //---------------------------------------------------------------
   const [noMoreOptionsLeft, setNotMoreOptionsLeft] = useState(false);
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  //---------------------------------------------------------------
-  //Getting the sequene associated with this id
+  const [errors, setErrors] = useState({});
   const [newSequence, setNewSequence] = useState({});
   const [oldSelectedSequenceSteps, setOldSelectedSequenceSteps] = useState([]);
-  const getSequence = async () => {
-    await axios
-      .get(ApiLinks.Sequence.getSequence + SelectedSequence, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        const { status, data } = res;
-        if (status === 200) {
-          const { Sequence } = data;
-          setNewSequence((prev) => ({ ...res?.data?.Sequence }));
-          const { steps } = Sequence;
-          //steps is a string: splitting it into an array
-          const splitedSteps = steps.split("||");
-          setAllowedOptions((prev) => []); //Emptying the prev allowed options: By default it had one items
-          //Replacing by the nmber of items existed
-          const prevSelectedStepName = [];
-          for (let i = 0; i < splitedSteps.length; i++) {
-            setAllowedOptions((prev) => [...prev, i + 1]);
-            const getStep = Steps.find(
-              (step) => parseInt(step.id) === parseInt(splitedSteps[i])
-            );
-            prevSelectedStepName.push(getStep.label);
-          }
-          //Replacing the selected options with this sequence options
-          setOldSelectedSequenceSteps((prev) => [...prevSelectedStepName]);
-          setSelectedOptions((prev) => [...splitedSteps]);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        if (err?.response?.status === 400) {
-          /* setAuth(null); 
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path); */
-        }
-        if (err?.response?.status === 403) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 406) {
-        }
-        if (err?.response?.status === 409) {
-        }
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
-  };
+  const [AllowedOptions, setAllowedOptions] = useState([1]);
+  const [SelectedOptions, setSelectedOptions] = useState([]);
+  // ** fetching data
   useEffect(() => {
-    //when original renddering, its
+    if (showUpdateSequenceModal && Auth !== null && Auth !== 0) {
+      getUserSteps();
+    }
+  }, [showUpdateSequenceModal]);
+  useEffect(() => {
     if (
+      showUpdateSequenceModal &&
       SelectedSequence !== null &&
       SelectedSequence !== undefined &&
       SelectedSequence !== 0
     ) {
       getSequence();
     }
-  }, [SelectedSequence, showUpdateSequenceModal]);
+  }, [showUpdateSequenceModal]);
+  // ** functions
+  const getUserSteps = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Steps.getAllUserSteps + Auth, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setSteps((prev) => [...res?.data?.Steps]);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  const getSequence = async () => {
+    try {
+      const res = await axios.get(
+        ApiLinks.Sequence.getSequence + SelectedSequence,
+        {
+          headers: {
+            Authorization: `Bearer ${Token}`,
+          },
+        }
+      );
+      if (res?.status === 200) {
+        const Sequence = res?.data?.Sequence;
+        setOldSelectedSequenceSteps((prev) => [...res?.data?.steps]);
+        setNewSequence((prev) => ({ ...res?.data?.Sequence }));
+        const { steps } = Sequence;
+        //steps is a string: splitting it into an array
+        const splitedSteps = steps.split("||");
+        setAllowedOptions((prev) => []); //Emptying the prev allowed options: By default it had one items
+        //Replacing by the nmber of items existed
+        for (let i = 0; i < splitedSteps.length; i++) {
+          setAllowedOptions((prev) => [...prev, i + 1]);
+        }
+        const prevSelectedStepName = [];
+        //Replacing the selected options with this sequence options
+        setOldSelectedSequenceSteps((prev) => [...prevSelectedStepName]);
+        setSelectedOptions((prev) => [...splitedSteps]);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** token expired
+      if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** on change
   const onChangeNewSequence = (event) => {
     const { name, value } = event.target;
     setNewSequence({ ...newSequence, [name]: value });
   };
-  //---------------------------------------------------------------
-  const [AllowedOptions, setAllowedOptions] = useState([1]);
-  const [SelectedOptions, setSelectedOptions] = useState([]);
-  //ADD an option
+  // ** Ad an option
   const addAnOtherOption = () => {
     if (SelectedOptions[AllowedOptions.length - 1]) {
     }
@@ -164,7 +147,7 @@ function UpdateSequenceModal({
       setAllowedOptions((prev) => [...prev, AllowedOptions.length + 1]);
     }
   };
-  //OnChange an option
+  // ** On Change an option
   const onChangeSelectedStep = (event, pos) => {
     const { value } = event.target;
     const newArray = [...SelectedOptions];
@@ -179,79 +162,92 @@ function UpdateSequenceModal({
     }
     setSelectedOptions((prev) => [...newArray]);
   };
-  //Remove an option
+  // ** Remove an option
   const removeCurrentOption = (id, pos) => {
     setAllowedOptions(
       AllowedOptions.filter((optionId) => parseInt(optionId) !== parseInt(id))
     );
     setSelectedOptions(SelectedOptions.slice(pos, 0));
   };
-  //---------------------------------------------------------------
-  const handleSubmitNewSequence = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
+    setErrors({});
+    setSpinningButton(true);
     const stringSteps = SelectedOptions.join("||");
-    setInputErrors({});
-    setBackErrors({});
     const { name, label } = newSequence;
     const uploadSequence = {
       steps: stringSteps,
       name,
       label,
     };
-    console.log(uploadSequence);
-    setInputErrors(validate(uploadSequence));
-    if (Object.keys(inputErrors).length === 0) {
-      setSpinningButton(true);
-      await axios
-        .put(ApiLinks.Sequence.Create + SelectedSequence, uploadSequence, {
-          headers: {
-            Authorization: `Bearer ${Token}`,
-          },
-        })
-        .then((res) => {
-          if (res.status === 200) {
-            setShowUpdateSequenceToast(true);
-            setShowUpdateSequenceModal(false);
-            setNewSequence({});
-            setInputErrors({});
-            setBackErrors({});
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setBackErrors({
-              ...backErrors,
-              Failed: "Something went wrong",
-            });
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 406) {
-            setBackErrors({
-              ...backErrors,
-              Required: "All informations are required!",
-            });
-          }
-          if (err?.response?.status === 409) {
-            setBackErrors({
-              ...backErrors,
-              alreadyExist: "Similar sequence already exists",
-            });
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
-      setSpinningButton(false);
+    const frontErrors = validate(uploadSequence);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
     }
-  };
-  const cancelUpdateSequence = () => {
-    setShowUpdateSequenceModal(false);
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.put(
+          ApiLinks.Sequence.Update + SelectedSequence,
+          uploadSequence,
+          {
+            headers: {
+              Authorization: `Bearer ${Token}`,
+            },
+          }
+        );
+        if (res?.status === 200) {
+          onHide();
+          refresh();
+          setShowUpdateSequenceToast(true);
+        }
+      } catch (err) {
+        // ** bad request
+        if (err?.response?.status === 400) {
+          setErrors({
+            Failed: "Something went wrong",
+          });
+        }
+        // ** no token
+        else if (err?.response?.status === 401) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** expired
+        else if (err?.response?.status === 403) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** name used
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "NAME"
+        ) {
+          setErrors({
+            ...errors,
+            name: "This name is already used by an other sequence",
+          });
+        }
+        // ** label used
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "LABEL"
+        ) {
+          setErrors({
+            ...errors,
+            label: "This label is already used by an other sequence",
+          });
+        } // ** server error
+        if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
+    }
     setSpinningButton(false);
-    setBackErrors({});
   };
-  //---------------------------------------------------------------
+  // ** validate form
   const validate = (values) => {
     const errors = {};
     if (values.name.length === 0) {
@@ -260,31 +256,36 @@ function UpdateSequenceModal({
     if (values.label.length === 0) {
       errors.label = "Label is required!";
     }
-    if (values.step && values.step.length === 0) {
+    if (!values.steps) {
       errors.steps = "Select the steps first!";
     } else if (values.steps.length === 1) {
       errors.steps = "Select at least 2 steps!";
     }
-
     return errors;
   };
+  // ** on close
+  const onHide = () => {
+    setShowUpdateSequenceModal(false);
+    setNewSequence({});
+    setErrors({});
+    setSelectedOptions([]);
+    setAllowedOptions([1]);
+    setNotMoreOptionsLeft(false);
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showUpdateSequenceModal}
-      onHide={() => setShowUpdateSequenceModal(false)}
+      onHide={onHide}
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowUpdateSequenceModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
-        <h5 className="mb-4">Create a sequence</h5>
-        <form>
+        <h5 className="mb-4">Update Sequence</h5>
+        <Form onSubmit={onSubmit}>
           <Col className="mb-3">
             <Form.Group>
               <Form.Label>Name</Form.Label>
@@ -296,11 +297,13 @@ function UpdateSequenceModal({
                   value={newSequence?.name}
                   onChange={onChangeNewSequence}
                   placeholder="Enter your sequence name"
+                  isInvalid={errors.name && true}
+                  autoFocus
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors.name && (
-              <Alert variant="danger">{inputErrors.name}</Alert>
+            {errors.name && (
+              <FormFeedback className="d-block">{errors.name}</FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -314,98 +317,107 @@ function UpdateSequenceModal({
                   value={newSequence?.label}
                   onChange={onChangeNewSequence}
                   placeholder="Enter your sequence name"
+                  isInvalid={errors.label && true}
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors.label && (
-              <Alert variant="danger">{inputErrors.label}</Alert>
+            {errors.label && (
+              <FormFeedback className="d-block">{errors.label}</FormFeedback>
             )}
           </Col>
-        </form>
-        <Col className="mb-3">
-          {AllowedOptions.map((option) => {
-            return (
-              <Form.Group className="mb-3" key={AllowedOptions.indexOf(option)}>
-                <Form.Label>Select a step</Form.Label>
-                <div className="d-flex">
-                  <Form.Select
-                    onChange={(event) =>
-                      onChangeSelectedStep(event, option - 1)
-                    }
-                    required
-                  >
-                    <option defaultValue className="alert alert-primary">
-                      {oldSelectedSequenceSteps[AllowedOptions.indexOf(option)]}
-                    </option>
-                    {Steps.map((step) => {
-                      const { id, label } = step;
-                      return (
-                        <option
-                          value={SelectedOptions[Steps.indexOf(step) - 1]}
-                          key={id}
-                        >
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </Form.Select>
-                  <Button
-                    className="btn btn-primary"
-                    onClick={addAnOtherOption}
-                  >
-                    <FontAwesomeIcon icon={faPlus} />
-                  </Button>
-                  {AllowedOptions.length > 1 && (
-                    <Button
-                      className="btn btn-danger"
-                      onClick={() => removeCurrentOption(option, option - 1)}
+
+          <Col className="mb-3">
+            {AllowedOptions.map((option, index) => {
+              return (
+                <Form.Group
+                  className="mb-3"
+                  key={AllowedOptions.indexOf(option)}
+                >
+                  <Form.Label>Select a step</Form.Label>
+                  <div className="d-flex">
+                    <Form.Select
+                      onChange={(event) =>
+                        onChangeSelectedStep(event, option - 1)
+                      }
+                      disabled
+                      required
                     >
-                      <FontAwesomeIcon icon={faTrash} />
+                      <option
+                        value={oldSelectedSequenceSteps[index]?.id}
+                        defaultChecked
+                      >
+                        {oldSelectedSequenceSteps[index]?.label}
+                      </option>
+                      {Steps.map((step) => {
+                        const { id, label } = step;
+                        return (
+                          <option
+                            disabled
+                            value={SelectedOptions[Steps.indexOf(step) - 1]}
+                            key={id}
+                          >
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </Form.Select>
+                    <Button
+                      className="btn btn-primary"
+                      onClick={addAnOtherOption}
+                      disabled
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
                     </Button>
-                  )}
-                </div>
-              </Form.Group>
-            );
-          })}
-          {noMoreOptionsLeft && (
-            <Alert variant="danger">No more options allowed!</Alert>
-          )}
-          {inputErrors?.steps && (
-            <Alert variant="danger">{inputErrors?.steps}</Alert>
-          )}
-        </Col>
-        {backErrors?.Required && (
-          <Alert variant="danger">{backErrors?.Required}</Alert>
-        )}
-        {backErrors?.Failed && (
-          <Alert variant="danger">{backErrors?.Failed}</Alert>
-        )}
-        {backErrors?.alreadyExist && (
-          <Alert variant="danger">{backErrors?.alreadyExist}</Alert>
-        )}
+                    {AllowedOptions.length > 1 && (
+                      <Button
+                        className="btn btn-danger"
+                        onClick={() => removeCurrentOption(option, option - 1)}
+                        disabled
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                    )}
+                  </div>
+                </Form.Group>
+              );
+            })}
+            {noMoreOptionsLeft && (
+              <FormFeedback className="d-block">
+                No more options allowed!
+              </FormFeedback>
+            )}
+            {errors.steps && (
+              <FormFeedback className="d-block">{errors.steps}</FormFeedback>
+            )}
+            {errors?.Failed && (
+              <p className="text-center text-danger">{errors?.Failed}</p>
+            )}
+          </Col>
+          <Col xs={12} className="text-center mt-5 mb-3 pt-50">
+            <Button
+              variant="link"
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              className="btn btn-success"
+              type="submit"
+            >
+              {spinningButton ? (
+                <Spinner animation="border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </Col>
+        </Form>
       </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="link"
-          className="text-white ms-auto btn btn-danger"
-          onClick={cancelUpdateSequence}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleSubmitNewSequence}
-          className="btn btn-success"
-        >
-          {spinningButton ? (
-            <Spinner animation="border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-          ) : (
-            "Update"
-          )}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 }

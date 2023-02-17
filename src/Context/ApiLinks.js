@@ -25,6 +25,7 @@ const ApiLinks = {
     updateAvatar: "user/avatar/", //+id
     updateTel: "user/Tel/", //+id => update the user password
     getUser: "user/",
+    update: "update/",
   },
   Company: {
     create: "company/", // => create a company
@@ -38,7 +39,7 @@ const ApiLinks = {
   },
   Icons: {
     Upload: "icon/",
-    Delete: "icon/",
+    Delete: "icon/delete",
     getIcons: "icon/", //+id
     getDefault: "icon/",
   },

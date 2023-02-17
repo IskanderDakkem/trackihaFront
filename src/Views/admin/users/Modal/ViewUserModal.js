@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
-/* import { useHistory } from "react-router-dom"; */
-//---------------------------------------------------------------------
+import { useHistory } from "react-router-dom";
+// ** bootstrap imports
 import {
   Col,
   Modal,
@@ -9,15 +10,10 @@ import {
   InputGroup,
   Image,
 } from "@themesberg/react-bootstrap";
-/* import {
-  faFolderOpen,
-  faPaperclip,
-  faEnvelope,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; */
+// ** icons imports
 import Profile3 from "../../../../assets/img/team/profile-picture-3.jpg";
-//---------------------------------------------------------------------
-/* import { Routes } from "../../../../Context/routes"; */
+// ** Api config
+import { Routes } from "../../../../Context/routes";
 import ApiLinks from "../../../../Context/ApiLinks";
 import axios from "../../../../Context/Axios";
 import { BASE_PATH } from "../../../../Context/Axios";
@@ -27,9 +23,11 @@ function ViewUserModal({
   setShowViewUserModal,
   selectedUser,
 }) {
+  // ** router
   const Token = localStorage.getItem("Token");
-  /* const navigate = useHistory(); */
+  const navigate = useHistory();
   //-----------------------------------------------------------------
+  // ** initial state
   const defaultUser = {
     avatar: "",
     CompanyName: "",
@@ -42,52 +40,63 @@ function ViewUserModal({
     companiesCreated: "",
     createdAt: "",
   };
+  // ** states
   const [user, setUsers] = useState({ ...defaultUser });
-  const getUser = async () => {
-    await axios
-      .get(ApiLinks.Users.getUser + selectedUser, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setUsers((prev) => res?.data?.item);
-        }
-      })
-      .catch((err) => {
-        console.log("response from view user modal: ", err);
-        /* if (err?.response?.status === 401) {
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        } */
-      });
-  };
+  // ** fetching data
   useEffect(() => {
     if (
+      showViewUserModal &&
       selectedUser !== null &&
       selectedUser !== undefined &&
       selectedUser !== 0
     ) {
       getUser();
     }
-  }, [showViewUserModal, selectedUser]);
-  let accountState = {};
-  if (user?.suspended === true) {
-    accountState.content = "Account is suspended";
-    accountState.cssClass = "text-danger";
-  } else {
-    accountState.content = "Account is active";
-    accountState.cssClass = "text-primary";
+  }, [showViewUserModal]);
+  // ** functions
+  const getUser = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Users.getUser + selectedUser, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setUsers((prev) => ({ ...res?.data?.item }));
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        navigate.push(Routes.SigninAdmin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        navigate.push(Routes.SigninAdmin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** status
+  const status = {};
+  // 1
+  if (user?.suspended) {
+    status.color = "danger";
+    status.text = "Suspended";
   }
+  // 2
+  else if (!user?.suspended && user?.verified) {
+    status.color = "success";
+    status.text = "Verified";
+  }
+  // 3
+  else if (!user?.suspended && !user?.verified) {
+    status.color = "warning";
+    status.text = "Not verified";
+  }
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
@@ -123,70 +132,70 @@ function ViewUserModal({
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Account state</Form.Label>
-            <InputGroup>
-              <Form.Control disabled value={accountState.content} />
-            </InputGroup>
+            <Form.Label>#: </Form.Label>&nbsp;
+            <span className="text-info">{user?.id}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Company Name</Form.Label>
-            <InputGroup>
-              <Form.Control disabled value={user?.CompanyName} />
-            </InputGroup>
+            <Form.Label>Account status: </Form.Label>&nbsp;
+            <span className={`text-${status.color}`}>{status.text}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Responsable Name</Form.Label>
-            <InputGroup>
-              <Form.Control disabled value={user?.ResponsableName} />
-            </InputGroup>
+            <Form.Label>Company name: </Form.Label>&nbsp;
+            <span className="text-info">{user?.CompanyName}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Email</Form.Label>
-            <InputGroup>
-              <Form.Control disabled value={user?.Email} />
-            </InputGroup>
-          </Form.Group>
-        </Col>
-        <Col className="mb-3">
-          <Form.Group id="phone">
-            <Form.Label>Phone Number</Form.Label>
-            <Form.Control disabled value={user?.Tel} />
+            <Form.Label>Responsable name: </Form.Label>&nbsp;
+            <span className="text-info">{user?.ResponsableName}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Selected offer</Form.Label>
-            <Form.Control disabled value={user?.OfferName} />
+            <Form.Label>E-mail: </Form.Label>&nbsp;
+            <span className="text-info">{user?.Email}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Number of companies allowed</Form.Label>
-            <Form.Control disabled value={user?.companiesNumberAllowed} />
+            <Form.Label>Phone Number: </Form.Label>&nbsp;
+            <span className="text-info">{user?.Tel}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Number of orders allowed</Form.Label>
-            <Form.Control disabled value={user?.OrdersNumberAllowed} />
+            <Form.Label>Offer: </Form.Label>&nbsp;
+            <span className="text-info">{user?.OfferName}</span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Number of companies created</Form.Label>
-            <Form.Control disabled value={user?.companiesCreated} />
+            <Form.Label>Companies number allowed: </Form.Label>&nbsp;
+            <span className="text-info">{user?.companiesNumberAllowed} </span>
           </Form.Group>
         </Col>
         <Col className="mb-3">
           <Form.Group>
-            <Form.Label>Created At</Form.Label>
-            <Form.Control disabled value={user?.createdAt} />
+            <Form.Label>Orders number allowed: </Form.Label>&nbsp;
+            <span className="text-info">{user?.OrdersNumberAllowed}</span>
+          </Form.Group>
+        </Col>
+        <Col className="mb-3">
+          <Form.Group>
+            <Form.Label>Companies created: </Form.Label>&nbsp;
+            <span className="text-info">{user?.companiesCreated}</span>
+          </Form.Group>
+        </Col>
+        <Col className="mb-3">
+          <Form.Group>
+            <Form.Label>Created At: </Form.Label>&nbsp;
+            <span className="text-info">
+              {new Date(user?.createdAt).toLocaleDateString()}
+            </span>
           </Form.Group>
         </Col>
       </Modal.Body>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Route, Switch, Redirect, useHistory } from "react-router-dom";
+import { Route, Switch, Redirect } from "react-router-dom";
 //------------------------------------------------------------
 import Preloader from "../components/Preloader";
 //------------------------------------------------------------
@@ -35,10 +35,6 @@ import TrackOrder from "../Views/TrackOrder";
 // ** Api configs
 import { Routes } from "../Context/routes";
 import RequireAuth from "../CommunComponents/RequireAuth";
-import axios from "./../Context/Axios";
-import useAuth from "./../Context/useAuth";
-import ApiLinks from "../Context/ApiLinks";
-import jwt from "jwt-decode";
 //------------------------------------------------------------
 const RouteWithLoader = ({ component: Component, ...rest }) => {
   const [loaded, setLoaded] = useState(false);

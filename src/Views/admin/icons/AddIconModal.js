@@ -1,47 +1,45 @@
-import React, { useEffect, useState } from "react";
+// ** react imports
+import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------
+// ** boot strap imports
 import {
   Col,
   Modal,
   Button,
   Form,
   InputGroup,
-  Alert,
   Image,
   Spinner,
 } from "@themesberg/react-bootstrap";
-import {
-  /* faFolderOpen,
-  faEnvelope, */
-  faPaperclip,
-} from "@fortawesome/free-solid-svg-icons";
+// ** icons imports
+import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Profile3 from "../../../assets/img/team/profile-picture-3.jpg";
-//----------------------------------------------------------------
+import { FormFeedback } from "reactstrap";
+// ** Api config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
-import useAuth from "../../../Context/useAuth";
-import { BASE_PATH } from "../../../Context/Axios";
+/* import useAuth from "../../../Context/useAuth"; */
 //----------------------------------------------------------------
-/* import Select from "react-select"; */
-//----------------------------------------------------------------
-function AddIconModal({ showAddIconModal, setShowAddIconModal }) {
+function AddIconModal({ showAddIconModal, setShowAddIconModal, refresh }) {
+  // ** router
   const navigate = useHistory();
-  const { Auth, setAuth } = useAuth();
+  /* const { Auth, setAuth } = useAuth(); */
   const Token = localStorage.getItem("Token");
-  //---------------------------------------------------------------
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  const [loadingApi, setLoadingApi] = useState(false);
-  //---------------------------------------------------------------
-  const [newIcon, setNewIcon] = useState({
+  // ** initial state
+  const initialIcon = {
     preview: Profile3,
-    raw: "",
-    path: "",
+    raw: null,
+  };
+  // ** states
+  const [errors, setErrors] = useState({});
+  const [loadingApi, setLoadingApi] = useState(false);
+  const [newIcon, setNewIcon] = useState({
+    ...initialIcon,
   });
   const [iconName, setIconName] = useState("");
+  // ** on change
   const onChangeFile = (event) => {
     const { files } = event.target;
     if (files.length > 0) {
@@ -51,67 +49,85 @@ function AddIconModal({ showAddIconModal, setShowAddIconModal }) {
       });
     }
   };
-  const handleSubmitNewIcon = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    const { raw } = newIcon;
-    console.log("raw", raw);
-    const formData = new FormData();
-    formData.append("file", raw, `${iconName}.png`);
-    await axios
-      .post(ApiLinks.Icons.Upload + 0, formData, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
+    setErrors({});
+    setLoadingApi(true);
+    const frontErrors = validate(iconName, newIcon);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      const formData = new FormData();
+      formData.append("file", newIcon.raw, `${iconName}.png`);
+      try {
+        const res = await axios.post(ApiLinks.Icons.Upload, formData, {
+          headers: {
+            Authorization: `Bearer ${Token}`,
+          },
+        });
         if (res?.status === 201) {
-          setShowAddIconModal(false);
-          setNewIcon({
-            preview: Profile3,
-            raw: "",
-            path: "",
+          onHide();
+          refresh();
+        }
+      } catch (err) {
+        if (err?.response?.status === 400) {
+          setErrors({
+            icone:
+              "Ops! Can't upload, Something is missing Please refresh the page",
           });
         }
-      })
-      .catch((err) => {
-        if (err?.response?.status === 400) {
+        // no token
+        else if (err?.response?.status === 401) {
+          navigate.push(Routes.Signin.path);
+          localStorage.removeItem("Token");
         }
-        if (err?.response?.status === 401) {
+        // expired
+        else if (err?.response?.status === 403) {
+          navigate.push(Routes.Signin.path);
+          localStorage.removeItem("Token");
         }
-        if (err?.response?.status === 403) {
-        }
-        if (err?.response?.status === 404) {
-        }
-        if (err?.response?.status === 406) {
-        }
-        if (err?.response?.status === 409) {
-        }
+        // server error
         if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+          localStorage.removeItem("Token");
         }
-      });
+      }
+    }
+    setLoadingApi(false);
+  };
+  // ** validate form
+  const validate = (name, icone) => {
+    const errors = {};
+    if (name === "") {
+      errors.name = "This field is required !";
+    }
+    if (icone.row === null) {
+      errors.icone = "This field is required !";
+    }
+    return errors;
+  };
+  // ** on close
+  const onHide = () => {
+    setErrors({});
+    setIconName("");
+    setNewIcon({ ...initialIcon });
+    setShowAddIconModal(false);
   };
   return (
-    <Modal
-      as={Modal.Dialog}
-      centered
-      show={showAddIconModal}
-      onHide={() => setShowAddIconModal(false)}
-    >
+    <Modal as={Modal.Dialog} centered show={showAddIconModal} onHide={onHide}>
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowAddIconModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
         <h5 className="mb-4">Upload icon</h5>
         <Col className="mb-3">
           <Form.Group className="mb-3">
             <Col /* md={6} */ className="mb-3">
-              <Form.Group id="firstName">
+              <Form.Group>
                 <Form.Label>Icon name</Form.Label>
-                <InputGroup id="email">
+                <InputGroup>
                   <Form.Control
                     required
                     type="text"
@@ -119,9 +135,13 @@ function AddIconModal({ showAddIconModal, setShowAddIconModal }) {
                     value={iconName}
                     onChange={(e) => setIconName(e.target.value)}
                     placeholder="Enter your icone name"
+                    isInvalid={errors.name && true}
                   />
                 </InputGroup>
               </Form.Group>
+              {errors.name && (
+                <FormFeedback className="d-block">{errors.name}</FormFeedback>
+              )}
             </Col>
             <div className="d-xl-flex align-items-center">
               <div className="user-avatar xl-avatar">
@@ -150,8 +170,8 @@ function AddIconModal({ showAddIconModal, setShowAddIconModal }) {
                 </div>
               </div>
             </div>
-            {inputErrors.raw && (
-              <Alert variant="danger">{inputErrors.raw}</Alert>
+            {errors.icone && (
+              <FormFeedback className="d-block">{errors.icone}</FormFeedback>
             )}
           </Form.Group>
         </Col>
@@ -159,13 +179,13 @@ function AddIconModal({ showAddIconModal, setShowAddIconModal }) {
           <Button
             variant="link"
             className="text-white ms-auto btn btn-danger"
-            onClick={() => setShowAddIconModal(false)}
+            onClick={onHide}
           >
             Cancel
           </Button>
           <Button
             variant="secondary"
-            onClick={handleSubmitNewIcon}
+            onClick={onSubmit}
             className="btn btn-success"
           >
             {loadingApi ? (

@@ -6,7 +6,6 @@ import {
   Col,
   InputGroup,
 } from "@themesberg/react-bootstrap";
-/* import { BASE_PATH } from "../Context/Axios"; */
 //-----------------------------------------------------------------
 function ViewCompanyModal({
   showViewCompanyModal,
@@ -22,11 +21,10 @@ function ViewCompanyModal({
     CompanyResponsable,
     CompanyEmail,
     PhoneNumber,
-    createdAt,
-    /*  ordersAllowed,
+    ordersAllowed,
     ordersCreated,
-    createdAt, */
-    //ordersLeft,
+    createdAt,
+    updatedAt,
   } = SelectedCompany;
   return (
     <Modal
@@ -44,7 +42,6 @@ function ViewCompanyModal({
       </Modal.Header>
       <Modal.Body>
         <h5 className="mb-4">Company detailes</h5>
-
         <Form>
           {/* {logo !== null && (
             <Col>
@@ -55,58 +52,82 @@ function ViewCompanyModal({
               />
             </Col>
           )} */}
-
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>id</Form.Label>
-              <InputGroup>
-                <Form.Control value={id} disabled={true} />
-              </InputGroup>
+              <Form.Label>#: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{id}</span>
             </Form.Group>
           </Col>
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>Name</Form.Label>
-              <InputGroup>
-                <Form.Control value={CompanyName} disabled={true} />
-              </InputGroup>
+              <Form.Label>Name: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{CompanyName}</span>
             </Form.Group>
           </Col>
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>Responsable</Form.Label>
-              <InputGroup>
-                <Form.Control value={CompanyResponsable} disabled={true} />
-              </InputGroup>
+              <Form.Label>Responsable: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{CompanyResponsable}</span>
             </Form.Group>
           </Col>
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>Email</Form.Label>
-              <InputGroup>
-                <Form.Control value={CompanyEmail} disabled={true} />
-              </InputGroup>
+              <Form.Label>Email: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{CompanyEmail}</span>
             </Form.Group>
           </Col>
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>Phone Number</Form.Label>
-              <InputGroup>
-                <Form.Control value={PhoneNumber} disabled={true} />
-              </InputGroup>
+              <Form.Label>Phone Number: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{`+${PhoneNumber}`}</span>
             </Form.Group>
           </Col>
           <Col className="mb-3">
             <Form.Group>
-              <Form.Label>Created At</Form.Label>
-              <InputGroup>
-                <Form.Control
-                  value={new Date(createdAt).toDateString()}
-                  disabled={true}
-                />
-              </InputGroup>
+              <Form.Label>Orders allowed: </Form.Label>&nbsp; &nbsp;
+              <span
+                className={`text-${
+                  ordersAllowed === -1
+                    ? "success"
+                    : ordersAllowed === 0
+                    ? "danger"
+                    : "info"
+                }`}
+              >
+                {ordersAllowed || 0}
+              </span>
             </Form.Group>
           </Col>
+          <Col className="mb-3">
+            <Form.Group>
+              <Form.Label>Orders count: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">{ordersCreated}</span>
+            </Form.Group>
+          </Col>
+          <Col className="mb-3">
+            <Form.Group>
+              <Form.Label>Orders remaining: </Form.Label>&nbsp; &nbsp;
+              <span className={`text-${"info"}`}>{0}</span>
+            </Form.Group>
+          </Col>
+          <Col className="mb-3">
+            <Form.Group>
+              <Form.Label>Created at: </Form.Label>&nbsp; &nbsp;
+              <span className="text-info">
+                {new Date(createdAt).toLocaleDateString()}
+              </span>
+            </Form.Group>
+          </Col>
+          {updatedAt !== null && (
+            <Col className="mb-3">
+              <Form.Group>
+                <Form.Label>Updated At: </Form.Label>&nbsp; &nbsp;
+                <span className="text-info">
+                  {new Date(updatedAt).toLocaleDateString()}
+                </span>
+              </Form.Group>
+            </Col>
+          )}
         </Form>
       </Modal.Body>
     </Modal>

@@ -22,6 +22,7 @@ function UpdateOrderModal({
   showUpdateOrderModal,
   setShowUpdateOrderToast,
   selectedOrder,
+  refresh,
 }) {
   const Token = localStorage.getItem("Token");
   const { Auth, setAuth } = useAuth();
@@ -32,7 +33,7 @@ function UpdateOrderModal({
   //--------------------------------------------------------------
   //get all delivery companies
   const [hubspotsList, setHubspotList] = useState([]);
-  const getAllHubSports = async () => {
+  /* const getAllHubSports = async () => {
     await axios
       .get(ApiLinks.deliveryCompany.getAll, {
         headers: {
@@ -45,9 +46,6 @@ function UpdateOrderModal({
         }
       })
       .catch((err) => {
-        /* if (err?.response?.status === 400) {
-          setBackErrors({ ...backErrors, ops: "Something went wrong" });
-        } */
         if (err?.response?.status === 401) {
           setAuth(null);
           localStorage.removeItem("Token");
@@ -65,11 +63,11 @@ function UpdateOrderModal({
           navigate.push(Routes.ServerError.path);
         }
       });
-  };
+  }; */
   //--------------------------------------------------------------
   //Get all crm
   const [crmList, setCrmList] = useState([]);
-  const getAllCrm = async () => {
+  /* const getAllCrm = async () => {
     await axios
       .get(ApiLinks.Crm.getAll, {
         headers: {
@@ -82,16 +80,11 @@ function UpdateOrderModal({
         }
       })
       .catch((err) => {
-        /* if (err?.response?.status === 400) {
-          setBackErrors({ ...backErrors, ops: "Something went wrong" });
-        } */
         if (err?.response?.status === 401) {
-          setAuth(null);
           localStorage.removeItem("Token");
           navigate.push(Routes.Signin.path);
         }
         if (err?.response?.status === 403) {
-          setAuth(null);
           localStorage.removeItem("Token");
           navigate.push(Routes.Signin.path);
         }
@@ -102,7 +95,7 @@ function UpdateOrderModal({
           navigate.push(Routes.ServerError.path);
         }
       });
-  };
+  }; */
   //--------------------------------------------------------------
   const [updatedOrder, setUpdatedOrder] = useState({});
   const [selectedCompany, setSelectedCompany] = useState({});
@@ -151,15 +144,16 @@ function UpdateOrderModal({
   //--------------------------------------------------------------
   useEffect(() => {
     if (
+      showUpdateOrderModal &&
       selectedOrder !== 0 &&
       selectedOrder !== null &&
       selectedOrder !== undefined
     ) {
       getOrder();
-      getAllCrm();
-      getAllHubSports();
+      /* getAllCrm();
+      getAllHubSports(); */
     }
-  }, [selectedOrder, showUpdateOrderModal]);
+  }, [showUpdateOrderModal]);
   //--------------------------------------------------------------
   const onChangeDeliveryCompanyDetailes = (event) => {
     const { name, value } = event.target;
@@ -185,6 +179,7 @@ function UpdateOrderModal({
       .then((res) => {
         if (res?.status === 200) {
           setShowUpdateOrderModal(false);
+          refresh();
           setShowUpdateOrderToast(true);
         }
       })
@@ -327,11 +322,12 @@ function UpdateOrderModal({
           <Col className="mb-3">
             <Form.Group>
               <Form.Label>Estimate delivery date</Form.Label>
+              <br />
+              <span className="text-info mb-2"></span>
               <InputGroup>
                 <Form.Control
                   required
-                  type="date"
-                  value={updatedOrder?.estimatedDeliveryDate}
+                  type="Date"
                   name="estimatedDeliveryDate"
                   placeholder={updatedOrder.estimatedDeliveryDate}
                   onChange={onChangeDeliveryCompanyDetailes}
@@ -409,7 +405,7 @@ function UpdateOrderModal({
               })}
             </Form.Group>
           </Col>
-          <Col className="mb-3">
+          {/* <Col className="mb-3">
             <Form.Group id="firstName">
               <Form.Label>Hubspot ID</Form.Label>
               <div className="d-flex gap-5">
@@ -434,8 +430,8 @@ function UpdateOrderModal({
                 </Form.Select>
               </div>
             </Form.Group>
-          </Col>
-          <Col ol className="mb-3">
+          </Col> */}
+          {/* <Col ol className="mb-3">
             <Form.Group id="firstName">
               <Form.Label>CRM ID</Form.Label>
               <div className="d-flex">
@@ -446,7 +442,7 @@ function UpdateOrderModal({
                   value={updatedOrder?.crmLink}
                   onChange={onChangeDeliveryCompanyDetailes}
                 />
-                {/* <Form.Select
+                <Form.Select
                   name="crmId"
                   value={updatedOrder?.crmId}
                   onChange={onChangeDeliveryCompanyDetailes}
@@ -457,10 +453,10 @@ function UpdateOrderModal({
                       {crm.label}
                     </option>
                   ))}
-                </Form.Select> */}
+                </Form.Select>
               </div>
             </Form.Group>
-          </Col>
+          </Col> */}
           <Col className="mb-3">
             <Form.Group>
               <Form.Label>Description</Form.Label>

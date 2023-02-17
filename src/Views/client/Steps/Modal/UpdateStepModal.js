@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Modal,
@@ -11,6 +12,8 @@ import {
   Image,
   Spinner,
 } from "@themesberg/react-bootstrap";
+import { FormFeedback } from "reactstrap";
+// ** icons imports
 import {
   faFolderOpen,
   faPaperclip,
@@ -18,13 +21,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Profile3 from "../../../../assets/img/team/profile-picture-3.jpg";
-//----------------------------------------------------------------
+// ** API config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { BASE_PATH } from "../../../../Context/Axios";
 import { Routes } from "../../../../Context/routes";
 import useAuth from "../../../../Context/useAuth";
-//----------------------------------------------------------------
+// ** react select
 import Select from "react-select";
 //----------------------------------------------------------------
 function UpdateStepModal({
@@ -32,18 +35,33 @@ function UpdateStepModal({
   setShowUpdateStepModal,
   setShowUpdateStepToast,
   selecteStep,
+  refresh,
 }) {
+  // ** router
   const Token = localStorage.getItem("Token");
   const navigate = useHistory();
   const { Auth, setAuth } = useAuth();
-  //----------------------------------------------------------------
-  const [spinningButton, setSpinningButton] = useState(false);
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  //---------------------------------------------------------------
+  // ** initial state
+  const intialIcon = {
+    preview: Profile3,
+    raw: null,
+  };
+  // ** states
+  const [icons, setIcons] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [loadingApi, setLoadingApi] = useState(false);
   const [showUploadIcon, setShowUploadIcon] = useState(true);
-  const [newIcon, setNewIcon] = useState({ preview: Profile3, raw: "" });
-  const onChangeNewIcon = (event) => {
+  const [newIcon, setNewIcon] = useState({ ...intialIcon });
+  const [step, setStep] = useState({ select: false });
+  // ** fetch data
+  useEffect(() => {
+    if (showUpdateStepModal && selecteStep !== 0 && Auth !== null) {
+      fetchOneStep();
+      getAlldefaultIcons();
+    }
+  }, [showUpdateStepModal]);
+  // ** on changes
+  const onChangeFile = (event) => {
     const { files } = event.target;
     if (files.length > 0) {
       setNewIcon({
@@ -52,14 +70,16 @@ function UpdateStepModal({
       });
     }
   };
-  //----------------------------------------------------------------
-  const [Step, setStep] = useState({});
-  const onChangeNewStep = (event) => {
+  // ** on change input fields
+  const onChange = (event) => {
     const { name, value } = event.target;
-    setStep({ ...Step, [name]: value });
+    setStep({ ...step, [name]: value });
   };
-  //----------------------------------------------------------------
-  const getStep = async () => {
+  const onChangeIconFromList = (option) => {
+    setStep({ ...step, icone: option.value, select: true });
+  };
+  // ** functions
+  const fetchOneStep = async () => {
     await axios
       .get(ApiLinks.Steps.getStep + selecteStep, {
         headers: {
@@ -67,214 +87,202 @@ function UpdateStepModal({
         },
       })
       .then((res) => {
-        const { status, data } = res;
-        if (status === 200) {
-          const { Step } = data;
-          setNewIcon((prev) => ({ ...prev, preview: BASE_PATH + Step?.icone }));
-          setStep({ ...Step });
+        if (res?.status === 200) {
+          setNewIcon((prev) => ({
+            ...prev,
+            preview: BASE_PATH + res?.data?.item?.icone,
+          }));
+          setStep({ ...res?.data?.item, select: true });
         }
       })
       .catch((err) => {
-        /*  if (err?.response?.status === 400) {
+        // ** bad request
+        if (err?.response?.status === 400) {
+          setErrors({
+            ops: "Something went wrong!",
+          });
+        }
+        // ** no token
+        else if (err?.response?.status === 401) {
           setAuth(null);
           localStorage.removeItem("Token");
           navigate.push(Routes.Signin.path);
-        } */
-        if (err?.response?.status === 403) {
+        }
+        // ** expired
+        else if (err?.response?.status === 403) {
           setAuth(null);
           localStorage.removeItem("Token");
           navigate.push(Routes.Signin.path);
         }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 406) {
-        }
-        if (err?.response?.status === 409) {
-        }
-        if (err?.response?.status === 500) {
+        // ** server errors
+        else if (err?.response?.status === 500) {
           navigate.push(Routes.ServerError.path);
         }
       });
   };
-  //----------------------------------------------------------------
-  const getDefaultIcons = async () => {
-    await axios
-      .get(ApiLinks.Icons.getIcons + Auth, {
+  const getAlldefaultIcons = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Icons.getDefault, {
         headers: {
           Authorization: `Bearer ${Token}`,
         },
-      })
-      .then((res) => {
-        const { data, status } = res;
-        if (status === 200) {
-          data.icons.forEach((item) => {
-            setIcons((prev) => [
-              ...prev,
-              {
-                value: item.path,
-                label: (
-                  <div>
-                    <img
-                      src={BASE_PATH + item.path}
-                      style={{ height: "100px" }}
-                      alt={"#"}
-                    />
-                  </div>
-                ),
-              },
-            ]);
+      });
+      if (res?.status === 200) {
+        const data = res?.data?.Icons;
+        data.forEach((item) => {
+          setIcons((prev) => [
+            ...prev,
+            {
+              value: item.path,
+              label: (
+                <div>
+                  <img src={BASE_PATH + item.path} style={{ height: "80px" }} />
+                </div>
+              ),
+            },
+          ]);
+        });
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** on submit
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    setErrors({});
+    setLoadingApi(true);
+    const frontErrors = validate(step, newIcon);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+      console.log("here ?");
+      console.log("errors: ", frontErrors);
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        let dataSent = step;
+        if (!step?.select) {
+          console.log("hereeeeeeeeeeeeeeeeee");
+          const formData = new FormData();
+          formData.append("icone", newIcon.raw);
+          formData.append("label", step.label);
+          formData.append("abrv", step.abrv);
+          formData.append("select", step.select || false);
+          dataSent = formData;
+        }
+        console.log("data sent: ", dataSent);
+        const res = await axios.put(
+          ApiLinks.Steps.Update + selecteStep + "/" + Auth,
+          dataSent,
+          {
+            headers: {
+              Authorization: `Bearer ${Token}`,
+            },
+          }
+        );
+        if (res?.status === 202) {
+          onHide();
+          refresh();
+          setShowUpdateStepToast(true);
+        }
+      } catch (err) {
+        console.log("err: ", err);
+        // ** bad request
+        if (err?.response?.status === 400) {
+          setErrors({
+            ops: "Something went wrong!",
           });
         }
-      })
-      .catch((err) => {
-        const { response } = err;
-        const { status } = response;
-        if (status === 400) {
-          //Do someting
+        // ** no token
+        else if (err?.response?.status === 401) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
         }
-        if (status === 404) {
-          navigate.push(Routes.NotFound.path);
+        // ** expired
+        else if (err?.response?.status === 403) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
         }
-        if (response.status === 500) {
+        // ** test
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "LABEL"
+        ) {
+          setErrors({ label: "Already used by an other step" });
+        }
+        //
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "ABRV"
+        ) {
+          setErrors({ abrv: "Already used by an other step" });
+        }
+        // ** server errors
+        else if (err?.response?.status === 500) {
           navigate.push(Routes.ServerError.path);
         }
-      });
-  };
-  //----------------------------------------------------------------
-  const [icons, setIcons] = useState([]);
-  useEffect(() => {
-    if (selecteStep !== 0 && Auth !== null) {
-      getStep();
-      getDefaultIcons();
-    }
-  }, [selecteStep]);
-  //---------------------------------------------------------------
-  const handleSubmitUpdateStep = async (event) => {
-    event.preventDefault();
-    setInputErrors({});
-    setBackErrors({});
-    setInputErrors(validate(Step, newIcon));
-    if (Object.keys(inputErrors).length === 0) {
-      setSpinningButton(<i class="fas fa-truck-monster    "></i>);
-      const { raw } = newIcon;
-      //Upload the icon
-      let verified = true;
-      if (raw) {
-        const formData = new FormData();
-        formData.append("file", raw);
-        await axios
-          .post(ApiLinks.Icons.Upload + Auth, formData, {
-            headers: {
-              Authorization: `Bearer ${Token}`,
-            },
-          })
-          .then((res) => {
-            if (res.status === 200) {
-              setShowUploadIcon(true);
-            }
-          })
-          .catch((err) => {
-            const { response } = err;
-            const { status } = response;
-            if (status === 406) {
-              setBackErrors({
-                ...backErrors,
-                iconRequired: "The icon is required!",
-              });
-            }
-            if (status === 404) {
-              /* navigate.push(Routes.NotFound.path); */
-            }
-            if (status === 500) {
-              navigate.push(Routes.ServerError.path);
-            }
-          });
       }
-      if (verified) {
-        await axios
-          .put(ApiLinks.Steps.Update + selecteStep, Step, {
-            headers: {
-              Authorization: `Bearer ${Token}`,
-            },
-          })
-          .then((res) => {
-            const { status } = res;
-            if (status === 200) {
-              setShowUpdateStepModal(false);
-              setShowUpdateStepToast(true);
-            }
-          })
-          .catch((err) => {
-            const { response } = err;
-            const { status } = response;
-            if (status === 400) {
-              setBackErrors({
-                ...backErrors,
-                Error: "Something went wrong!",
-              });
-            }
-            if (status === 406) {
-              setBackErrors({
-                ...backErrors,
-                required: "All informations are required!",
-              });
-            }
-            if (status === 409) {
-              setBackErrors({
-                ...backErrors,
-                exist: "This step already exists!",
-              });
-            }
-            if (status === 404) {
-              navigate.push(Routes.NotFound.path);
-            }
-            if (status === 500) {
-              navigate.push(Routes.ServerError.path);
-            }
-          });
-      }
-      setSpinningButton(false);
     }
+    setLoadingApi(false);
   };
-  //---------------------------------------------------------------
-  const validate = (values1, values2) => {
+  // ** validate form
+  const validate = (step, icon) => {
     const errors = {};
-    const { label, abrv, icone } = values1;
-    const { raw } = values2;
-    if (!label) {
-      errors.label = "Step label is required!";
+    // label
+    if (step.label === "") {
+      errors.label = "This field is required !";
     }
-    if (!abrv) {
-      errors.abrv = "Step abbreviation is required!";
+    // abrv
+    if (step.abrv === "") {
+      errors.abrv = "This field is required!";
     }
-    if (!icone && !raw) {
-      errors.icone = "Please select an existing icon!";
-      errors.newIcon = "Or upload your own icon!";
+    if (step.icone === "" && !showUploadIcon) {
+      errors.icone = "This field is required!";
     }
-    if (raw && !icone) {
-      const { size } = raw;
-      if (size > 100000) {
-        errors.size = "icon size can't surpass 100 KO";
-      }
-    }
-
+    // icon
+    /* if (icon.raw === null && showUploadIcon) {
+      errors.raw = "This field is required!";
+    } */
     return errors;
   };
-  //---------------------------------------------------------------
+  // ** on close
+  const onHide = () => {
+    setShowUpdateStepModal(false);
+    setErrors({});
+    setStep({});
+    setNewIcon({ ...intialIcon });
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showUpdateStepModal}
-      onHide={() => setShowUpdateStepModal(false)}
+      onHide={onHide}
     >
       <Modal.Header>
-        <Button variant="close" onClick={() => setShowUpdateStepModal(false)} />
+        <Button variant="close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
-        <h5 className="mb-4">Create a step</h5>
-        <form>
+        <h5 className="mb-4">Update step</h5>
+        <Form>
           <Col className="mb-3">
             <Form.Group>
               <Form.Label>Label</Form.Label>
@@ -285,17 +293,17 @@ function UpdateStepModal({
                 <Form.Control
                   type="text"
                   name="label"
-                  value={Step?.label}
-                  onChange={onChangeNewStep}
+                  value={step?.label}
+                  onChange={onChange}
                   placeholder="Enter your step name"
+                  isInvalid={errors.label && true}
+                  required
+                  autoFocus
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors.label && (
-              <Alert variant="danger">{inputErrors.label}</Alert>
-            )}
-            {backErrors.label && (
-              <Alert variant="danger">{backErrors.label}</Alert>
+            {errors.label && (
+              <FormFeedback className="d-block">{errors.label}</FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -308,17 +316,16 @@ function UpdateStepModal({
                 <Form.Control
                   type="text"
                   name="abrv"
-                  value={Step?.abrv}
-                  onChange={onChangeNewStep}
+                  value={step?.abrv}
+                  onChange={onChange}
                   placeholder="Enter your step name abbreviation"
+                  isInvalid={errors.abrv && true}
+                  required
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors.abrv && (
-              <Alert variant="danger">{inputErrors.abrv}</Alert>
-            )}
-            {backErrors.abrv && (
-              <Alert variant="danger">{backErrors.abrv}</Alert>
+            {errors.abrv && (
+              <FormFeedback className="d-block">{errors.abrv}</FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -326,18 +333,12 @@ function UpdateStepModal({
               <Form.Label>Select an icon</Form.Label>
               <Select
                 options={icons}
-                value={Step?.icone}
+                /* value={Step?.icone} */
                 name="icone"
-                onChange={onChangeNewIcon}
+                onChange={onChangeIconFromList}
                 isDisabled={showUploadIcon}
               />
             </Form.Group>
-            {inputErrors.icone && (
-              <Alert variant="danger">{inputErrors.icone}</Alert>
-            )}
-            {backErrors.icone && (
-              <Alert variant="danger">{backErrors.icone}</Alert>
-            )}
           </Col>
           <Col>
             <Form.Group className="mb-3">
@@ -374,7 +375,8 @@ function UpdateStepModal({
                         <input
                           type="file"
                           name="file"
-                          onChange={onChangeNewIcon}
+                          onChange={onChangeFile}
+                          required
                         />
                         <div className="d-md-block text-start">
                           <div className="fw-normal text-dark mb-1">
@@ -390,67 +392,37 @@ function UpdateStepModal({
                 </div>
               )}
 
-              {inputErrors.newIcon && (
+              {errors.newIcon && (
                 <Alert variant="danger" className="mx-3">
-                  {inputErrors.newIcon}
+                  {errors.newIcon}
                 </Alert>
               )}
-              {/* {inputErrors.size && (
-                <Alert variant="danger" className="mx-3">
-                  {inputErrors.size}
-                </Alert>
-              )} */}
-              {/* {inputErrors.dimensions && (
-                <Alert variant="danger" className="mx-3">
-                  {inputErrors.dimensions}
-                </Alert>
-              )} */}
-              {/* {backErrors.iconRequired && (
-                <Alert variant="danger" className="mx-3">
-                  {backErrors.iconRequired}
-                </Alert>
-              )} */}
             </Form.Group>
           </Col>
-          {inputErrors.Error && (
-            <Alert variant="danger" className="mx-3">
-              {inputErrors.Error}
-            </Alert>
-          )}
-          {inputErrors.required && (
-            <Alert variant="danger" className="mx-3">
-              {inputErrors.required}
-            </Alert>
-          )}
-          {inputErrors.exist && (
-            <Alert variant="danger" className="mx-3">
-              {inputErrors.exist}
-            </Alert>
-          )}
-        </form>
+          <Col xs={12} className="text-center mt-4 mb-3 pt-50">
+            <Button
+              variant="link"
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={onSubmit}
+              className="btn btn-success"
+            >
+              {loadingApi ? (
+                <Spinner animation="border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </Col>
+        </Form>
       </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="link"
-          className="text-white ms-auto btn btn-danger"
-          onClick={() => setShowUpdateStepModal(false)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleSubmitUpdateStep}
-          className="btn btn-success"
-        >
-          {spinningButton ? (
-            <Spinner animation="border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-          ) : (
-            "Update"
-          )}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 }

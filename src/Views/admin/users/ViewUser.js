@@ -1,24 +1,30 @@
+// ** react impors
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-// ----------------------------------------------------------------
+import { useParams, useHistory } from "react-router-dom";
+// ** bootstrap imports
 import { Tab, Nav } from "@themesberg/react-bootstrap";
+// ** Parts
 import TableTitle from "../../../CommunComponents/TableTitle";
-// ----------------------------------------------------------------
 import RouteWithAdminSideBar from "../../../CommunComponents/RouteWithAdminSideBar";
-// ----------------------------------------------------------------
+// ** Parts
 import OrdersContent from "../../client/Orders/OrdersContent";
 import CompaniesContent from "../../client/Companies/CompaniesContent";
 import SequenceContent from "../../client/Sequence/SequenceContent";
 import StepsContent from "../../client/Steps/StepsContent";
-import UserProfile from "./Modal/UserProfile";
+// ** Api config
 import axios from "./../../../Context/Axios";
 import ApiLinks from "./../../../Context/ApiLinks";
+import useAuth from "../../../Context/useAuth";
+import { Routes } from "../../../Context/routes";
 // ----------------------------------------------------------------
 function ViewUser() {
+  // ** router
+  const { setAuth } = useAuth();
+  let Token = localStorage.getItem("Token");
+  const navigate = useHistory();
   // ** params
   const { id } = useParams();
-  const Token = localStorage.getItem("Token");
-  //-----------------------------------------------------------------
+  // ** initial state
   const defaultUser = {
     avatar: "",
     CompanyName: "",
@@ -31,28 +37,45 @@ function ViewUser() {
     companiesCreated: "",
     createdAt: "",
   };
+  // ** state
   const [user, setUsers] = useState({ ...defaultUser });
-  const getUser = async () => {
-    await axios
-      .get(ApiLinks.Users.getUser + id, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setUsers((prev) => res?.data?.item);
-        }
-      })
-      .catch((err) => {
-        console.log("response from view user modal: ", err);
-      });
-  };
+  // ** fetching data
   useEffect(() => {
     if (id !== null && id !== undefined && id !== 0) {
       getUser();
     }
   }, [id]);
+  // ** functions
+  const getUser = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Users.getUser + id, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setUsers((prev) => ({ ...res?.data?.item }));
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** ==>
   return (
     <RouteWithAdminSideBar>
       <TableTitle title={`Company: ${user?.CompanyName}`} />
@@ -89,7 +112,7 @@ function ViewUser() {
             <UserProfile profile={user} />
           </Tab.Pane> */}
           <Tab.Pane eventKey="orders" className="py-4">
-            <OrdersContent clientId={id} />
+            {/* <OrdersContent clientId={id} /> */}
           </Tab.Pane>
           <Tab.Pane eventKey="companies" className="py-4">
             <CompaniesContent clientId={id} />

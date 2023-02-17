@@ -1,12 +1,13 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
-//--------------------------------------------------------------
+// ** api config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import { BASE_PATH } from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
-//--------------------------------------------------------------
+// ** icons imports
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
@@ -15,6 +16,8 @@ import {
   faTrashAlt,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
+import Profile3 from "../../../assets/img/team/profile-picture-3.jpg";
+// ** bootstrap imports
 import {
   Col,
   Row,
@@ -29,58 +32,66 @@ import {
   Image,
   Button,
 } from "@themesberg/react-bootstrap";
-import Profile3 from "../../../assets/img/team/profile-picture-3.jpg";
-//--------------------------------------------------------------
+// ** modals imports
 import CreateUserModal from "./Modal/CreateUserModal";
 import ViewUserModal from "./Modal/ViewUserModal";
 import DeleteUserModal from "./Modal/DeleteUserModal";
 import UpdateUserModal from "./Modal/UpdateUserModal";
 //--------------------------------------------------------------
 function UsersContent() {
+  // ** router
   const Token = localStorage.getItem("Token");
   const { paginationNumber } = useAuth();
   const navigate = useHistory();
-  //--------------------------------------------------------------
+  // ** initial states
+  let pagesNumber = [];
+  // ** states
   const [users, setUsers] = useState([]);
   const [rowPerPage, setRowPerPage] = useState(1);
   const [limitPerPage, setLimitPerPage] = useState(paginationNumber);
   const [usersNumber, setUserssNumber] = useState(0);
-  //--------------------------------------------------------------
-  let pagesNumber = [];
+  const [selectedUser, setSelectedUser] = useState(0);
   for (let i = 1; i < usersNumber / limitPerPage + 1; i++) {
     pagesNumber.push(i);
   }
-  //--------------------------------------------------------------
+  // ** fetching data
+  useEffect(() => {
+    getAllUsers();
+  }, [rowPerPage]);
+  // ** functions
   const getAllUsers = async () => {
-    await axios
-      .get(ApiLinks.Users.getAll + `${rowPerPage}/${limitPerPage}`, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setUsers((prev) => res?.data?.items);
-          setUserssNumber((prev) => res?.data?.count);
+    try {
+      const res = await axios.get(
+        ApiLinks.Users.getAll + `${rowPerPage}/${limitPerPage}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Token}`,
+          },
         }
-      })
-      .catch((err) => {
-        console.log("from users: ", err);
-        if (err?.response?.status === 401) {
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          navigate.push(Routes.Signin.path);
-        }
-        /* if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        } */
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
+      );
+      if (res?.status === 200) {
+        setUsers([...res?.data?.items]);
+        setUserssNumber(res?.data?.size);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        navigate.push(Routes.SigninAdmin.path);
+        localStorage.removeItem("Token");
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        navigate.push(Routes.SigninAdmin.path);
+        localStorage.removeItem("Token");
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+        localStorage.removeItem("Token");
+      }
+    }
   };
-  //--------------------------------------------------------------
+  // **  pagination managaement
   const PaginatePage = (pageNumber) => {
     setRowPerPage((prev) => pageNumber);
     getAllUsers();
@@ -95,31 +106,16 @@ function UsersContent() {
       setRowPerPage((prev) => prev + 1);
     }
   };
-  //--------------------------------------------------------------
+  // ** modals
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [showUpdateUserModal, setShowUpdateUserModal] = useState(false);
   const [showViewUserModal, setShowViewUserModal] = useState(false);
-  //---------------------------------------------------------------------
+  // ** toasts
   const [showCreateUserToast, setShowCreateUserToast] = useState(false);
   const [showDeleteUserToast, setShowDeleteUserToast] = useState(false);
   const [showUpdateUserToast, setShowUpdateUserToast] = useState(false);
-  //---------------------------------------------------------------------
-  useEffect(() => {
-    getAllUsers();
-  }, [
-    rowPerPage,
-    showCreateUserModal,
-    showDeleteUserModal,
-    showViewUserModal,
-    showUpdateUserModal,
-    showCreateUserToast,
-    showDeleteUserToast,
-    showUpdateUserToast,
-  ]);
-  //---------------------------------------------------------------------
-  const [selectedUser, setSelectedUser] = useState(0);
-  //---------------------------------------------------------------------
+  // ** modal functions
   const handleShowViewUser = (id) => {
     setShowViewUserModal(true);
     setSelectedUser((prev) => id);
@@ -132,7 +128,7 @@ function UsersContent() {
     setShowUpdateUserModal(true);
     setSelectedUser((prev) => id);
   };
-  //---------------------------------------------------------------------
+  // ** ==>
   return (
     <>
       {/* ------------------------------------------------------------------------ */}
@@ -180,41 +176,38 @@ function UsersContent() {
             <thead>
               <tr>
                 <th className="border-bottom">#</th>
-                <th className="border-bottom">Avatar</th>
+                {/* <th className="border-bottom">Avatar</th> */}
                 <th className="border-bottom">Company name</th>
                 <th className="border-bottom">Responsable name</th>
                 <th className="border-bottom">Email</th>
                 <th className="border-bottom">Phone Number</th>
-                <th className="border-bottom">Offer</th>
+                <th className="border-bottom">Status</th>
                 <th className="border-bottom">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => {
-                const {
-                  id,
-                  avatar,
-                  CompanyName,
-                  ResponsableName,
-                  Email,
-                  Tel,
-                  OfferName,
-                } = user;
+                const { id, CompanyName, ResponsableName, Email, Tel } = user;
+                const status = {};
+                // 1
+                if (user?.suspended) {
+                  status.color = "danger";
+                  status.text = "Suspended";
+                }
+                // 2
+                else if (!user?.suspended && user?.verified) {
+                  status.color = "success";
+                  status.text = "Verified";
+                }
+                // 3
+                else if (!user?.suspended && !user?.verified) {
+                  status.color = "warning";
+                  status.text = "Not verified";
+                }
+                // ** ==>
                 return (
                   <tr key={id}>
                     <td className="fw-normal text-centre">{id}</td>
-                    <td>
-                      <Image
-                        src={
-                          avatar === null ||
-                          avatar === undefined ||
-                          avatar === ""
-                            ? Profile3
-                            : BASE_PATH + avatar
-                        }
-                        style={{ height: "50px" }}
-                      />
-                    </td>
                     <td>
                       <span className="fw-normal">{CompanyName}</span>
                     </td>
@@ -228,10 +221,12 @@ function UsersContent() {
                       <span className="fw-normal ">{Tel}</span>
                     </td>
                     <td>
-                      <span className="fw-normal ">{OfferName}</span>
+                      <span className={`fw-normal text-${status.color}`}>
+                        {status.text}
+                      </span>
                     </td>
                     <td>
-                      {/* <OverlayTrigger
+                      <OverlayTrigger
                         placement="bottom"
                         trigger={["hover", "focus"]}
                         overlay={<Tooltip>View the user</Tooltip>}
@@ -240,12 +235,9 @@ function UsersContent() {
                           className="btn btn-warning p-2 ms-2"
                           onClick={() => handleShowViewUser(id)}
                         >
-                          <FontAwesomeIcon
-                            icon={faUser}
-                            className="icon-dark"
-                          />
+                          <FontAwesomeIcon icon={faEye} className="icon-dark" />
                         </Button>
-                      </OverlayTrigger> */}
+                      </OverlayTrigger>
                       <OverlayTrigger
                         placement="bottom"
                         trigger={["hover", "focus"]}
@@ -254,7 +246,6 @@ function UsersContent() {
                         <Link
                           to={`/back/users/${id}`}
                           className="btn btn-warning p-2 ms-2"
-                          /*onClick={() => handleShowViewUser(id)} */
                         >
                           <FontAwesomeIcon
                             icon={faUser}
@@ -341,6 +332,7 @@ function UsersContent() {
         showCreateUserModal={showCreateUserModal}
         setShowCreateUserModal={setShowCreateUserModal}
         setShowCreateUserToast={setShowCreateUserToast}
+        refresh={getAllUsers}
       />
       <ViewUserModal
         showViewUserModal={showViewUserModal}
@@ -352,12 +344,14 @@ function UsersContent() {
         setShowDeleteUserModal={setShowDeleteUserModal}
         setShowDeleteUserTOast={setShowDeleteUserToast}
         selectedUser={selectedUser}
+        refresh={getAllUsers}
       />
       <UpdateUserModal
         showUpdateUserModal={showUpdateUserModal}
         setShowUpdateUserModal={setShowUpdateUserModal}
         selectedUser={selectedUser}
         setShowUpdateUserToast={setShowUpdateUserToast}
+        refresh={getAllUsers}
       />
     </>
   );

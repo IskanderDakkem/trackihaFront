@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Modal,
@@ -10,142 +11,124 @@ import {
   Spinner,
   Alert,
 } from "@themesberg/react-bootstrap";
-import Select from "react-select";
-//----------------------------------------------------------------------------
+import { FormFeedback } from "reactstrap";
+// ** API config
 import useAuth from "../../../../Context/useAuth";
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { Routes } from "../../../../Context/routes";
 import { BASE_PATH } from "../../../../Context/Axios";
+// ** react select
+import Select from "react-select";
 //----------------------------------------------------------------------------
 function CreateOrderModal({
   setShowCreateOrderModal,
   showCreateOrderModal,
   setShowCreateOrderToast,
+  refresh,
 }) {
+  // ** router
   const Token = localStorage.getItem("Token");
   const { Auth, setAuth } = useAuth();
   const navigate = useHistory();
+  // ** states
   const [loadingApi, setLoadingApi] = useState(false);
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  //--------------------------------------------------------------
-  //Get all the user companies
   const [companies, setCompanies] = useState([]);
   const [companiesOptions, setCompaniesOptions] = useState([]);
-  const getAllUserCompanies = async () => {
-    await axios
-      .get(ApiLinks.Company.getAllUserCompanies + Auth, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          if (res?.data?.Companies !== undefined) {
-            setCompanies((prev) => [...res?.data?.Companies]);
-            const options = [];
-            res.data.Companies.map((company) => {
-              options.push({
-                value: company.id,
-                label: company.CompanyName,
-              });
-            });
-            setCompaniesOptions(options);
-          }
-        }
-      })
-      .catch((err) => {});
-  };
-  //--------------------------------------------------------------
-  //get all the user steps
   const [steps, setSteps] = useState([]);
-  const getAllUserSteps = async () => {
-    await axios
-      .get(ApiLinks.Steps.getAllUserSteps + Auth, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setSteps((prev) => [...res?.data?.Steps]);
-        }
-      })
-      .catch((err) => {});
-  };
-  //--------------------------------------------------------------
-  //get the user sequences
   const [Sequences, setSequences] = useState([]);
   const [sequencesOptions, setSequenesOptions] = useState([]);
-  const getAllUserSequence = async (req, res) => {
-    await axios
-      .get(ApiLinks.Sequence.getAllUserSequences + Auth, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setSequences((prev) => [...res?.data?.items]);
-          const options = [];
-          res.data.items.map((sequence) => {
-            options.push({ value: sequence, label: sequence.name });
-          });
-          setSequenesOptions((prev) => options);
-        }
-      })
-      .catch((err) => {});
-  };
-  //--------------------------------------------------------------
-  //get all delivery companies
   const [hubspotsList, setHubspotList] = useState([]);
-  const getAllHubSports = async () => {
-    await axios
-      .get(ApiLinks.deliveryCompany.getAll, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setHubspotList((prev) => [...res?.data?.items]);
-        }
-      })
-      .catch((err) => {});
-  };
-  //--------------------------------------------------------------
-  //Get all crm
-  const [crmList, setCrmList] = useState([]);
-  /* const getAllCrm = async () => {
-    await axios
-      .get(ApiLinks.Crm.getAll, {
-        headers: {
-          Authorization: `Bearer ${Token}`,
-        },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setCrmList((prev) => [...res?.data?.items]);
-        }
-      })
-      .catch((err) => {
-        console.log("get all crm: ", err);
-      });
-  }; */
-  //--------------------------------------------------------------
-  //Bring data
+  const [errors, setErrors] = useState({});
+  const [trackingCode, setTrackingCode] = useState("");
+  // ** fetching data
   useEffect(() => {
-    if (Auth !== 0 && Auth !== null && Auth !== undefined) {
+    if (
+      showCreateOrderModal &&
+      Auth !== 0 &&
+      Auth !== null &&
+      Auth !== undefined
+    ) {
       getAllUserCompanies();
       getAllUserSteps();
       getAllUserSequence();
-      getAllHubSports();
-      /* getAllCrm(); */
+      /* getAllHubSports(); */
     }
   }, [showCreateOrderModal]);
-  //--------------------------------------------------------------
-  //Select the company and show its detailes
+  // ** functions
+  const getAllUserCompanies = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Company.getAllUserCompanies + Auth, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setCompanies((prev) => [...res?.data?.Companies]);
+        const options = [];
+        res.data.Companies.map((company) => {
+          options.push({
+            value: company.id,
+            label: company.CompanyName,
+          });
+        });
+        setCompaniesOptions(options);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const getAllUserSteps = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Steps.getAllUserSteps + Auth, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setSteps((prev) => [...res?.data?.Steps]);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const getAllUserSequence = async (req, res) => {
+    try {
+      const res = await axios.get(
+        ApiLinks.Sequence.getAllUserSequences + Auth,
+        {
+          headers: {
+            Authorization: `Bearer ${Token}`,
+          },
+        }
+      );
+      if (res?.status === 200) {
+        setSequences((prev) => [...res?.data?.items]);
+        const options = [];
+        res.data.items.map((sequence) => {
+          options.push({ value: sequence, label: sequence.name });
+        });
+        setSequenesOptions((prev) => options);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  /* const getAllHubSports = async () => {
+    try {
+      const res = await axios.get(ApiLinks.deliveryCompany.getAll, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        setHubspotList((prev) => [...res?.data?.items]);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }; */
+  // ** Select the company and show its detailes
   const [selectedCompany, setSelectedCompany] = useState({ id: "" });
   const onChangeSelecteCompany = (option) => {
     const match = companies.find(
@@ -153,26 +136,22 @@ function CreateOrderModal({
     );
     setSelectedCompany((prev) => ({ ...match }));
   };
-  //--------------------------------------------------------------
-  //generate a timestamp
-  const [trackingCode, setTrackingCode] = useState("");
+  // ** generate a timestamp
+
   const generateTruckingCode = (event) => {
     let code = Math.floor(Date.now() / 1000);
     code = "OZ" + new Date().getFullYear() + String(code);
     setTrackingCode(code);
   };
-  //--------------------------------------------------------------
-  //on change estimated delivery date
+  // ** on change estimated delivery date
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(null);
   const onChangeEstimatedDeliveryDate = (event) => {
     const { value } = event.target;
     setEstimatedDeliveryDate((prev) => value);
   };
-  //--------------------------------------------------------------
-  //on change the selected sequence
+  // ** on change the selected sequence
   const [selectedSequence, setSeletedSequence] = useState({ id: "" });
   const [stepsDates, setStepsDates] = useState([]);
-  /* const [sentStepsDates, setSentStepsDates] = useState([]); */
   const onChangeSelectedSequence = (option) => {
     const { value } = option;
     const matchSequence = Sequences.find(
@@ -187,17 +166,14 @@ function CreateOrderModal({
       selectedSteps.push({ id: match.id, value: match, Date: null });
     });
     setStepsDates((prev) => [...selectedSteps]);
-    /* setSentStepsDates((prev) => [...selectedSentStepsDates]); */
     setSeletedSequence((prev) => ({
       id: value.id,
     }));
   };
-  //--------------------------------------------------------------
-  //on change steps dates
+  // ** on change steps dates
   const onChangeSelectSequenceStepDate = (event) => {
     const index = event.target.name;
     const Date = event.target.value;
-    /* const newStepsDatesSent = sentStepsDates; */
     const newStepsDates = stepsDates;
     newStepsDates[index] = {
       id: newStepsDates[index].id,
@@ -206,8 +182,7 @@ function CreateOrderModal({
     };
     setStepsDates((prev) => [...newStepsDates]);
   };
-  //--------------------------------------------------------------
-  //parternss informations
+  // ** parternss informations
   const [deliveryDetailes, setDeliveryDetailes] = useState({
     IDhubspot: "",
     hubspotId: "",
@@ -219,18 +194,15 @@ function CreateOrderModal({
     const { name, value } = event.target;
     setDeliveryDetailes((prev) => ({ ...prev, [name]: value }));
   };
-  //--------------------------------------------------------------
-  //send email
+  // ** send email
   const [sendMail, setSendMail] = useState(false);
   const onChangeSendMail = (event) => {
     setSendMail(!sendMail);
   };
-  //--------------------------------------------------------------
-  //Create an error
-  const handelSubmitCreateOrder = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setInputErrors({});
-    setBackErrors({});
+    setErrors({});
     const newOrder = {
       companyId: selectedCompany.id,
       trackingCode,
@@ -244,57 +216,49 @@ function CreateOrderModal({
       stepsDates,
       sendMail,
     };
-    setInputErrors(validate(newOrder));
     setLoadingApi(true);
-    if (Object.keys(inputErrors).length === 0) {
-      await axios
-        .post(ApiLinks.Orders.Create + Auth, newOrder, {
+    const frontErrors = validate(newOrder);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.post(ApiLinks.Orders.Create + Auth, newOrder, {
           headers: {
             Authorization: `Bearer ${Token}`,
           },
-        })
-        .then((res) => {
-          if (res?.status === 201) {
-            setShowCreateOrderModal(false);
-            setShowCreateOrderToast(true);
-            setSendMail(false);
-            setSeletedSequence({ id: "" });
-            setEstimatedDeliveryDate("");
-            setStepsDates([]);
-            setTrackingCode("");
-            setSelectedCompany({ id: "" });
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setBackErrors({ ...backErrors, ops: "Something went wrong" });
-          }
-          if (err?.response?.status === 401) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 403) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 406) {
-            setBackErrors((prev) => ({
-              ...prev,
-              required: "All informations are required!",
-            }));
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
         });
+        if (res?.status === 201) {
+          onHide();
+          refresh();
+          setShowCreateOrderToast(true);
+        }
+      } catch (err) {
+        // ** bad request
+        if (err?.response?.status === 400) {
+          setErrors({ ops: "Something went wrong" });
+        }
+        // ** no token
+        else if (err?.response?.status === 401) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** expired token
+        else if (err?.response?.status === 403) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** server error
+        if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
     }
     setLoadingApi(false);
   };
+  // ** on hide
   const validate = (value) => {
     const errors = {};
     if (value.companyId.length === 0) {
@@ -313,37 +277,43 @@ function CreateOrderModal({
     }
     return errors;
   };
+  // ** on close
+  const onHide = () => {
+    setShowCreateOrderModal(false);
+    setSendMail(false);
+    setSeletedSequence({ id: "" });
+    setEstimatedDeliveryDate("");
+    setStepsDates([]);
+    setTrackingCode("");
+    setSelectedCompany({ id: "" });
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showCreateOrderModal}
-      onHide={() => setShowCreateOrderModal(false)}
+      onHide={onHide}
       className="w-100"
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowCreateOrderModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
         <h5 className="mb-4">Create an order</h5>
-        <Form>
+        <Form onSubmit={onSubmit}>
           <Col className="mb-3">
-            <Form.Group id="firstName">
+            <Form.Group>
               <Form.Label>Select a company</Form.Label>
               <Select
                 required
                 options={companiesOptions}
-                /* value={selectedCompany.id} */
                 onChange={onChangeSelecteCompany}
               />
             </Form.Group>
           </Col>
-          {inputErrors.companyId && (
-            <Alert variant="danger">{inputErrors.companyId}</Alert>
+          {errors.companyId && (
+            <FormFeedback className="d-block">{errors.companyId}</FormFeedback>
           )}
           <Col className="mb-3">
             <Form.Group id="firstName">
@@ -362,8 +332,10 @@ function CreateOrderModal({
                 />
               </div>
             </Form.Group>
-            {inputErrors.trackingCode && (
-              <Alert variant="danger">{inputErrors.trackingCode}</Alert>
+            {errors.trackingCode && (
+              <FormFeedback className="d-block">
+                {errors.trackingCode}
+              </FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -371,7 +343,6 @@ function CreateOrderModal({
               <Form.Label>Company Name</Form.Label>
               <InputGroup>
                 <Form.Control
-                  required
                   type="text"
                   name="CompanyName"
                   value={selectedCompany?.CompanyName}
@@ -386,7 +357,6 @@ function CreateOrderModal({
               <Form.Label>Responsable name</Form.Label>
               <InputGroup>
                 <Form.Control
-                  required
                   type="text"
                   name="CompanyResponsable"
                   value={selectedCompany?.CompanyResponsable}
@@ -401,7 +371,6 @@ function CreateOrderModal({
               <Form.Label>Company Email</Form.Label>
               <InputGroup>
                 <Form.Control
-                  required
                   type="text"
                   name="CompanyEmail"
                   value={selectedCompany?.CompanyEmail}
@@ -416,7 +385,6 @@ function CreateOrderModal({
               <Form.Label>Company phone number</Form.Label>
               <InputGroup>
                 <Form.Control
-                  required
                   type="text"
                   name="PhoneNumber"
                   value={selectedCompany?.PhoneNumber}
@@ -436,14 +404,15 @@ function CreateOrderModal({
                   value={estimatedDeliveryDate}
                   name="estimatedDeliveryDate"
                   onChange={onChangeEstimatedDeliveryDate}
+                  isInvalid={errors.estimatedDeliveryDate && true}
                   placeholder="Estimated delivery date"
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors.estimatedDeliveryDate && (
-              <Alert variant="danger">
-                {inputErrors.estimatedDeliveryDate}
-              </Alert>
+            {errors.estimatedDeliveryDate && (
+              <FormFeedback className="d-block">
+                {errors.estimatedDeliveryDate}
+              </FormFeedback>
             )}
           </Col>
           {/* Select a sequence */}
@@ -453,12 +422,13 @@ function CreateOrderModal({
               <Select
                 options={sequencesOptions}
                 required
-                /* value={selectedSequence.id} */
                 onChange={onChangeSelectedSequence}
               />
             </Form.Group>
-            {inputErrors.sequenceId && (
-              <Alert variant="danger">{inputErrors.sequenceId}</Alert>
+            {errors.sequenceId && (
+              <FormFeedback className="d-block">
+                {errors.sequenceId}
+              </FormFeedback>
             )}
           </Col>
           {/* Steps dates */}
@@ -468,17 +438,17 @@ function CreateOrderModal({
                 return (
                   <div
                     key={step.id}
-                    className="d-flex flex-column align-items-center pt-3"
+                    className="d-flex flex-column align-items-center pt-3 mb-1"
                   >
                     <Form.Label>{step.value.label}</Form.Label>
                     <img
                       src={BASE_PATH + step.value.icone}
+                      className="py-2"
                       alt="#"
                       style={{ width: "50px" }}
                     />
                     <InputGroup>
                       <Form.Control
-                        required
                         type="Date"
                         name={stepsDates.indexOf(step)}
                         onChange={onChangeSelectSequenceStepDate}
@@ -489,12 +459,14 @@ function CreateOrderModal({
                 );
               })}
             </Form.Group>
-            {inputErrors.stepsDates && (
-              <Alert variant="danger">{inputErrors.stepsDates}</Alert>
+            {errors.stepsDates && (
+              <FormFeedback className="d-block">
+                {errors.stepsDates}
+              </FormFeedback>
             )}
           </Col>
           {/* select crm */}
-          <Col className="mb-3">
+          {/* <Col className="mb-3">
             <Form.Group id="firstName">
               <Form.Label>CRM ID</Form.Label>
               <div className="d-flex gap-3">
@@ -505,23 +477,11 @@ function CreateOrderModal({
                   value={deliveryDetailes?.IDcrm}
                   onChange={onChangeDeliveryCompanyDetailes}
                 />
-                {/* <Form.Select
-                  onChange={onChangeDeliveryCompanyDetailes}
-                  name="crmId"
-                  className=""
-                >
-                  <option defaultValue>Select CRM</option>
-                  {crmList.map((crm) => (
-                    <option key={crm.id} value={crm.id}>
-                      {crm.label}
-                    </option>
-                  ))}
-                </Form.Select> */}
               </div>
             </Form.Group>
-          </Col>
+          </Col> */}
           {/* select hubspot ud */}
-          <Col className="mb-3">
+          {/*  <Col className="mb-3">
             <Form.Group id="firstName">
               <Form.Label>Logistics ID</Form.Label>
               <div className="d-flex gap-3">
@@ -534,7 +494,6 @@ function CreateOrderModal({
                 />
                 <Form.Select
                   onChange={onChangeDeliveryCompanyDetailes}
-                  /* value={deliveryDetailes?.hubspotId} */
                   name="hubspotId"
                 >
                   <option defaultValue>Select Logistics</option>
@@ -546,7 +505,7 @@ function CreateOrderModal({
                 </Form.Select>
               </div>
             </Form.Group>
-          </Col>
+          </Col> */}
           {/* Select description */}
           <Col className="mb-3">
             <Form.Group>
@@ -557,7 +516,6 @@ function CreateOrderModal({
                 name="description"
                 onChange={onChangeDeliveryCompanyDetailes}
                 value={deliveryDetailes.description}
-                required
               ></textarea>
             </Form.Group>
           </Col>
@@ -571,34 +529,38 @@ function CreateOrderModal({
             />
             <label className="form-check-label">send follow-up email</label>
           </Col>
-          {backErrors.ops && <Alert variant="danger">{backErrors.ops}</Alert>}
-          {backErrors.required && (
-            <Alert variant="danger">{backErrors.required}</Alert>
+          {errors.ops && <Alert variant="danger">{errors.ops}</Alert>}
+          {errors.alreadyused && (
+            <p className="text-center text-danger">
+              This company is already used by an order, Please delete the order
+              first
+            </p>
           )}
+          <Col xs={12} className="text-center mt-4 mb-3 pt-50">
+            <Button
+              variant="link"
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              type="submit"
+              className="btn btn-success"
+            >
+              {loadingApi ? (
+                <Spinner animation="border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </Col>
         </Form>
       </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="link"
-          className="text-white ms-auto btn btn-danger"
-          onClick={() => setShowCreateOrderModal(false)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handelSubmitCreateOrder}
-          className="btn btn-success"
-        >
-          {loadingApi ? (
-            <Spinner animation="border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-          ) : (
-            "Create"
-          )}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 }

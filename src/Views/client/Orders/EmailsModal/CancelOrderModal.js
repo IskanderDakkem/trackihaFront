@@ -13,6 +13,7 @@ function CancelOrderModal({
   setCancelOrderModal,
   cancelOrder,
   selectedOrder,
+  refresh,
 }) {
   const Token = localStorage.getItem("Token");
   const { setAuth } = useAuth();
@@ -30,6 +31,7 @@ function CancelOrderModal({
       )
       .then((res) => {
         if (res?.status === 200) {
+          refresh();
           setCancelOrderModal(false);
           setCancelOrderToast(true);
         }

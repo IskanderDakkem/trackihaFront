@@ -37,7 +37,7 @@ function DeleteCrmModal({
         }
         if (err?.response?.status === 401) {
           localStorage.removeItem("admin_token");
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.response?.status === 404) {
           navigate.push(Routes.NotFound.path);

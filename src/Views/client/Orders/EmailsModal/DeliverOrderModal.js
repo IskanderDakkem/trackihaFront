@@ -21,6 +21,7 @@ function DeliverOrderModal({
   sendIsDeliveredModal,
   setSendIsDeliveredModal,
   selectedOrder,
+  refresh,
 }) {
   const { Auth, setAuth } = useAuth();
   const Token = localStorage.getItem("Token");
@@ -88,6 +89,7 @@ function DeliverOrderModal({
         )
         .then((res) => {
           if (res?.status === 200) {
+            refresh();
             setSendIsDeliveredModal(false);
             setSendIsDeliveredToast(true);
           }

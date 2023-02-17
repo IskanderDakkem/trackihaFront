@@ -10,6 +10,7 @@ import {
   faSearch,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+// ** Bootstrap imports
 import {
   Col,
   Row,
@@ -29,17 +30,17 @@ import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
 import { BASE_PATH } from "../../../Context/Axios";
-// ** create modal and toast
+// ** Modals
 import CreateStepModal from "./Modal/CreateStepModal";
-import CreateStepToast from "./Toast/CreateStepToast";
-// ** delete modal and toast
 import DeleteStepModal from "./Modal/DeleteStepModal";
-import DeleteStepToast from "./Toast/DeleteStepToast";
-// ** update modal and toast
 import UpdateStepModal from "./Modal/UpdateStepModal";
+// ** toasts
+import CreateStepToast from "./Toast/CreateStepToast";
+import DeleteStepToast from "./Toast/DeleteStepToast";
 import UpdateStepToast from "./Toast/UpdateStepToast";
 //--------------------------------------------------------------------
 function StepsContent({ clientId }) {
+  // ** router
   const { Auth, setAuth, paginationNumber } = useAuth();
   let Token = localStorage.getItem("Token");
   let searchedId = Auth;
@@ -47,20 +48,27 @@ function StepsContent({ clientId }) {
     searchedId = clientId;
   }
   const navigate = useHistory();
-  //---------------------------------------------------------------
+  // ** initial states
+  let pagesNumber = [];
+  // ** states
   const [StepsList, setStepsList] = useState([]);
   const [rowPerPage, setRowPerPage] = useState(1);
   const [limitPerPage, setLimitPerPage] = useState(paginationNumber);
   const [stepsNumber, setStepsNumber] = useState(0);
-  //--------------------------------------------------------------
-  let pagesNumber = [];
+  const [selecteStep, setSelecteStep] = useState(0);
   for (let i = 1; i < stepsNumber / limitPerPage + 1; i++) {
     pagesNumber.push(i);
   }
-  //--------------------------------------------------------------
+  // ** fetching data
+  useEffect(() => {
+    if (searchedId !== null && searchedId !== undefined && searchedId !== 0) {
+      getAllUserSteps();
+    }
+  }, [rowPerPage]);
+  // ** functions
   const getAllUserSteps = async () => {
-    await axios
-      .get(
+    try {
+      const res = await axios.get(
         ApiLinks.Steps.getUserSteps +
           searchedId +
           `/${rowPerPage}/${limitPerPage}`,
@@ -69,34 +77,31 @@ function StepsContent({ clientId }) {
             Authorization: `Bearer ${Token}`,
           },
         }
-      )
-      .then((res) => {
-        if (res.status === 200) {
-          setStepsList((prev) => res?.data?.items);
-          setStepsNumber((prev) => res?.data?.count);
-        }
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
+      );
+      if (res?.status === 200) {
+        setStepsList((prev) => [...res?.data?.items]);
+        setStepsNumber((prev) => res?.data?.count);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      else if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
   };
-
-  //--------------------------------------------------------------
+  // ** pagination management
   const PaginatePage = (pageNumber) => {
     setRowPerPage((prev) => pageNumber);
     getAllUserSteps();
@@ -111,44 +116,24 @@ function StepsContent({ clientId }) {
       setRowPerPage((prev) => prev + 1);
     }
   };
-  //--------------------------------------------------------------------
+  // ** create modal
   const [showCreateStepModal, setShowCreateStepModal] = useState(false);
-  const [showViewStepModal, setShowViewStepModal] = useState(false);
-  const [showDeleteStepModal, setShowDeleteStepModal] = useState(false);
-  const [showUpdateStepModal, setShowUpdateStepModal] = useState(false);
-  //--------------------------------------------------------------------
   const [showCreateStepToast, setShowCreateStepToast] = useState(false);
-  const [showDeleteStepToast, setShowDeleteStepToast] = useState(false);
-  const [showUpdateStepToast, setShowUpdateStepToast] = useState(false);
-  useEffect(() => {
-    if (searchedId !== null && searchedId !== undefined && searchedId !== 0) {
-      getAllUserSteps();
-    }
-  }, [
-    rowPerPage,
-    showCreateStepToast,
-    showCreateStepModal,
-    showDeleteStepModal,
-    showUpdateStepModal,
-    showDeleteStepToast,
-    showUpdateStepToast,
-  ]);
-  //--------------------------------------------------------------------
-  const [selecteStep, setSelecteStep] = useState(0);
-  //--------------------------------------------------------------------
-  const handleShowViewStepModal = (id) => {
-    setShowViewStepModal(true);
-    setSelecteStep((prev) => id);
-  };
+  // ** delete
+  const [showDeleteStepModal, setShowDeleteStepModal] = useState(false);
   const handleDeleteStep = (id) => {
     setShowDeleteStepModal(true);
     setSelecteStep((prev) => id);
   };
+  const [showDeleteStepToast, setShowDeleteStepToast] = useState(false);
+  // ** Update
+  const [showUpdateStepModal, setShowUpdateStepModal] = useState(false);
   const handleUpdateStep = (id) => {
     setShowUpdateStepModal(true);
     setSelecteStep((prev) => id);
   };
-  //--------------------------------------------------------------------
+  const [showUpdateStepToast, setShowUpdateStepToast] = useState(false);
+  // ** ==>
   return (
     <>
       <div className="table-settings mb-4">
@@ -198,14 +183,14 @@ function StepsContent({ clientId }) {
                 <th className="border-bottom">icone</th>
                 <th className="border-bottom">label</th>
                 <th className="border-bottom">abbreviation</th>
+                <th className="border-bottom">created At</th>
                 <th className="border-bottom">Action</th>
               </tr>
             </thead>
             {/* ------------------------------------------------------------------------ */}
             <tbody>
               {StepsList.map((step) => {
-                const { id, label, abrv, icone } = step;
-
+                const { id, label, abrv, icone, createdAt } = step;
                 return (
                   <tr key={id}>
                     <td>{id}</td>
@@ -218,15 +203,12 @@ function StepsContent({ clientId }) {
                     <td>
                       <span className="fw-normal text-center">{abrv}</span>
                     </td>
-
+                    <td>
+                      <span className="fw-normal text-center">
+                        {new Date(createdAt).toLocaleDateString()}
+                      </span>
+                    </td>
                     <td className="text-dark m-0 p-0">
-                      {/* <button
-                        className="btn btn-warning p-2
-                      ms-2"
-                        onClick={handleShowViewStepModal}
-                      >
-                        <FontAwesomeIcon icon={faEye} />
-                      </button> */}
                       <OverlayTrigger
                         placement="bottom"
                         trigger={["hover", "focus"]}
@@ -305,6 +287,7 @@ function StepsContent({ clientId }) {
         showCreateStepModal={showCreateStepModal}
         setShowCreateStepModal={setShowCreateStepModal}
         setShowCreateStepToast={setShowCreateStepToast}
+        refresh={getAllUserSteps}
       />
       <CreateStepToast
         showCreateStepToast={showCreateStepToast}
@@ -316,6 +299,7 @@ function StepsContent({ clientId }) {
         setShowDeleteStepModal={setShowDeleteStepModal}
         setShowDeleteStepToast={setShowDeleteStepToast}
         selecteStep={selecteStep}
+        refresh={getAllUserSteps}
       />
       <DeleteStepToast
         showDeleteStepToast={showDeleteStepToast}
@@ -327,6 +311,7 @@ function StepsContent({ clientId }) {
         setShowUpdateStepModal={setShowUpdateStepModal}
         setShowUpdateStepToast={setShowUpdateStepToast}
         selecteStep={selecteStep}
+        refresh={getAllUserSteps}
       />
       <UpdateStepToast
         showUpdateStepToast={showUpdateStepToast}

@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------
+// ** bootstrap improts
 import {
   Col,
   Modal,
@@ -11,6 +12,7 @@ import {
   Image,
   Spinner,
 } from "@themesberg/react-bootstrap";
+// ** icons
 import {
   faFolderOpen,
   faPaperclip,
@@ -18,328 +20,224 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Profile3 from "../../../../assets/img/team/profile-picture-3.jpg";
-//----------------------------------------------------------------
+// ** api config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { BASE_PATH } from "../../../../Context/Axios";
 import { Routes } from "../../../../Context/routes";
 import useAuth from "../../../../Context/useAuth";
-//----------------------------------------------------------------
+// ** packages
 import Select from "react-select";
+import { FormFeedback } from "reactstrap";
 //----------------------------------------------------------------
 function CreateStepModal({
   showCreateStepModal,
   setShowCreateStepModal,
   setShowCreateStepToast,
+  refresh,
 }) {
+  // ** router
   const navigate = useHistory();
   const { Auth, setAuth } = useAuth();
   const Token = localStorage.getItem("Token");
-  //---------------------------------------------------------------
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  const [loadingApi, setLoadingApi] = useState(false);
-  //---------------------------------------------------------------
-  const [icons, setIcons] = useState([]);
-  useEffect(() => {
-    const getDefaultIcons = async () => {
-      await axios
-        .get(ApiLinks.Icons.getIcons + Auth, {
-          headers: {
-            Authorization: `Bearer ${Token}`,
-          },
-        })
-        .then((res) => {
-          const { data, status } = res;
-          if (status === 200) {
-            data.icons.forEach((item) => {
-              setIcons((prev) => [
-                ...prev,
-                {
-                  value: item.path,
-                  label: (
-                    <div>
-                      <img
-                        src={BASE_PATH + item.path}
-                        style={{ height: "100px" }}
-                      />
-                    </div>
-                  ),
-                },
-              ]);
-            });
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 401) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 403) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
-    };
-    if (Auth !== null || Auth !== undefined || Auth !== 0) {
-      getDefaultIcons();
-    }
-  }, [showCreateStepModal, setShowCreateStepModal]);
-  //---------------------------------------------------------------
-  const [showUploadIcon, setShowUploadIcon] = useState(false);
-  const [newIcon, setNewIcon] = useState({
+  // ** initial state
+  const intialIcon = {
     preview: Profile3,
-    raw: "",
-    path: "",
-  });
+    raw: null,
+  };
+  const initialStep = {
+    label: "",
+    abrv: "",
+    select: false,
+  };
+  // ** states
+  const [icons, setIcons] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [loadingApi, setLoadingApi] = useState(false);
+  const [showUploadIcon, setShowUploadIcon] = useState(false);
+  const [newIcon, setNewIcon] = useState({ ...intialIcon });
+  const [step, setStep] = useState({ ...initialStep });
+  // ** fetching data
+  useEffect(() => {
+    if (showCreateStepModal) {
+      getAlldefaultIcons();
+    }
+  }, [showCreateStepModal]);
+  // ** functions
+  const getAlldefaultIcons = async () => {
+    try {
+      const res = await axios.get(ApiLinks.Icons.getDefault, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      if (res?.status === 200) {
+        const data = res?.data?.Icons;
+        data.forEach((item) => {
+          setIcons((prev) => [
+            ...prev,
+            {
+              value: item.path,
+              label: (
+                <div>
+                  <img src={BASE_PATH + item.path} style={{ height: "80px" }} />
+                </div>
+              ),
+            },
+          ]);
+        });
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** on change file
   const onChangeFile = (event) => {
     const { files } = event.target;
-    let icone = `/Assets/Clients/${Auth}/icons/${files[0]?.name}`;
     if (files.length > 0) {
       setNewIcon({
         preview: URL.createObjectURL(event.target.files[0]),
         raw: files[0],
-        path: icone,
       });
     }
-    setStep({ ...Step, icone });
   };
-  /* useEffect(() => {
-    setInputErrors({});
-    setBackErrors({});
-  }, []); */
-  //---------------------------------------------------------------
-  const [Step, setStep] = useState({
-    label: "",
-    abrv: "",
-    icone: "",
-  });
-  const onChangeNewStep = (event) => {
+  // ** on change input fields
+  const onChange = (event) => {
     const { name, value } = event.target;
-    setStep({ ...Step, [name]: value });
+    setStep({ ...step, [name]: value });
   };
-  const onChangeIcon = (option) => {
-    setStep({ ...Step, icone: option.value });
+  const onChangeIconFromList = (option) => {
+    setStep({ ...step, icone: option.value, select: true });
   };
-  //---------------------------------------------------------------
-  const handleSubmitCreateStep = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setInputErrors({});
-    setBackErrors({});
-    setInputErrors(validate(Step, newIcon));
-    if (Object.keys(inputErrors).length === 0) {
-      setLoadingApi(true);
-      //if no icone upload
-      //---------------------------------------------------------------
-      if (showUploadIcon === false) {
-        await axios
-          .post(ApiLinks.Steps.Create + Auth, Step, {
-            headers: {
-              Authorization: `Bearer ${Token}`,
-            },
-          })
-          .then((res) => {
-            if (res.status === 201) {
-              setShowCreateStepToast(true);
-              setShowCreateStepModal(false);
-              setInputErrors({});
-              setBackErrors({});
-              setStep({
-                label: "",
-                abrv: "",
-                icone: "",
-              });
-              setNewIcon({ preview: Profile3, raw: "" });
-            }
-          })
-          .catch((err) => {
-            if (err?.response?.status === 400) {
-              setBackErrors({
-                ...backErrors,
-                Error: "Something went wrong!",
-              });
-            }
-            if (err?.response?.status === 401) {
-              setAuth(null);
-              localStorage.removeItem("Token");
-              navigate.push(Routes.Signin.path);
-            } else if (err?.response?.status === 403) {
-              setAuth(null);
-              localStorage.removeItem("Token");
-              navigate.push(Routes.Signin.path);
-            } else if (err?.response?.status === 406) {
-              setBackErrors({
-                ...backErrors,
-                required: "All informations are required!",
-              });
-            } else if (err?.response?.status === 409) {
-              setBackErrors({
-                ...backErrors,
-                exist: "This step already exists!",
-              });
-            }
-            if (err?.response?.status === 404) {
-              navigate.push(Routes.NotFound.path);
-            }
-            if (err?.response?.status === 500) {
-              navigate.push(Routes.ServerError.path);
-            }
+    setErrors({});
+    setLoadingApi(true);
+    const frontErrors = validate(step, newIcon);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        let dataSent = step;
+        if (!step.select) {
+          console.log("hereeeeeeeeeeeeeeeeee");
+          const formData = new FormData();
+          formData.append("icone", newIcon.raw);
+          formData.append("label", step.label);
+          formData.append("abrv", step.abrv);
+          formData.append("select", step.select || false);
+          dataSent = formData;
+        }
+        const res = await axios.post(ApiLinks.Steps.Create + Auth, dataSent, {
+          headers: {
+            Authorization: `Bearer ${Token}`,
+          },
+        });
+        if (res?.status === 201) {
+          onHide();
+          refresh();
+          setShowCreateStepToast(true);
+        }
+      } catch (err) {
+        console.log("##: ", err);
+        // ** bad request
+        if (err?.response?.status === 400) {
+          setErrors({
+            ops: "Something went wrong!",
           });
-      }
-      if (showUploadIcon === true) {
-        let verified = false;
-        const { raw } = newIcon;
-        const formData = new FormData();
-        formData.append("file", raw);
-        await axios
-          .post(ApiLinks.Icons.Upload + Auth, formData, {
-            headers: {
-              Authorization: `Bearer ${Token}`,
-            },
-          })
-          .then((res) => {
-            if (res?.status === 201) {
-              verified = true;
-            }
-          })
-          .catch((err) => {
-            if (err?.response?.status === 400) {
-            }
-            if (err?.response?.status === 401) {
-            }
-            if (err?.response?.status === 403) {
-            }
-            if (err?.response?.status === 404) {
-            }
-            if (err?.response?.status === 406) {
-            }
-            if (err?.response?.status === 409) {
-            }
-            if (err?.response?.status === 500) {
-            }
-          });
-        if (verified) {
-          await axios
-            .post(ApiLinks.Steps.Create + Auth, Step, {
-              headers: {
-                Authorization: `Bearer ${Token}`,
-              },
-            })
-            .then((res) => {
-              if (res.status === 201) {
-                setShowCreateStepToast(true);
-                setShowCreateStepModal(false);
-                setStep({
-                  label: "",
-                  abrv: "",
-                  icone: "",
-                });
-                setNewIcon({ preview: Profile3, raw: "" });
-              }
-            })
-            .catch((err) => {
-              const { response } = err;
-              const { status } = response;
-              if (status === 400) {
-                setBackErrors({
-                  ...backErrors,
-                  Error: "Something went wrong!",
-                });
-              }
-              if (status === 401) {
-                setAuth(null);
-                localStorage.removeItem("Token");
-                navigate.push(Routes.Signin.path);
-              }
-              if (status === 403) {
-                setAuth(null);
-                localStorage.removeItem("Token");
-                navigate.push(Routes.Signin.path);
-              }
-              if (status === 406) {
-                setBackErrors({
-                  ...backErrors,
-                  required: "All informations are required!",
-                });
-              }
-              if (status === 409) {
-                setBackErrors({
-                  ...backErrors,
-                  exist: "This step already exists!",
-                });
-              }
-              if (status === 404) {
-                navigate.push(Routes.NotFound.path);
-              }
-              if (status === 500) {
-                navigate.push(Routes.ServerError.path);
-              }
-            });
+        }
+        // ** no token
+        else if (err?.response?.status === 401) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** expired
+        else if (err?.response?.status === 403) {
+          setAuth(null);
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** test
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "LABEL"
+        ) {
+          setErrors({ label: "Already used by an other step" });
+        }
+        //
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === "ABRV"
+        ) {
+          setErrors({ abrv: "Already used by an other step" });
+        }
+        // ** server errors
+        else if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
         }
       }
     }
     setLoadingApi(false);
   };
-  //---------------------------------------------------------------
-  const validate = (values1, values2) => {
+  // ** validate form
+  const validate = (step, icon) => {
     const errors = {};
-    //If label doesnt exist
-    if (!values1.label) {
-      errors.label = "Label is required!";
+    // label
+    if (step.label === "") {
+      errors.label = "This field is required !";
     }
-    //if abr desnt exist
-    if (!values1.abrv) {
-      errors.abrv = "Abbreviation is required!";
+    // abrv
+    if (step.abrv === "") {
+      errors.abrv = "This field is required!";
     }
-    //if both icone and raw dont exist
-    if (!values1.showUploadIcon && !values1.icone && !values1.raw) {
-      errors.icone = "Please select an icon!";
-      errors.raw = "Or upload your own icon!";
+    if (step.icone === "" && !showUploadIcon) {
+      errors.icone = "This field is required!";
     }
-    //in case not an upload
-    if (!showUploadIcon) {
-      if (values1.icone.length < 1) {
-        errors.icone = "Please select at least 2 icons!";
-      }
-    }
-    if (showUploadIcon) {
-      if (!values2.raw) {
-        errors.raw = "Pleast upload an icon!";
-      }
+    // icon
+    if (icon.raw === null && showUploadIcon) {
+      errors.raw = "This field is required!";
     }
     return errors;
   };
-  //---------------------------------------------------------------
+  // ** on close
+  const onHide = () => {
+    setShowCreateStepModal(false);
+    setErrors({});
+    setStep({ ...initialStep });
+    setNewIcon({ ...intialIcon });
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showCreateStepModal}
-      onHide={() => setShowCreateStepModal(false)}
+      onHide={onHide}
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowCreateStepModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
-        <h5 className="mb-4">Create a step</h5>
-        <form onSubmit={handleSubmitCreateStep}>
+        <h5 className="mb-4">Create step</h5>
+        <Form onSubmit={onSubmit}>
           <Col className="mb-3">
             <Form.Group>
               <Form.Label>Label</Form.Label>
@@ -350,14 +248,17 @@ function CreateStepModal({
                 <Form.Control
                   type="text"
                   name="label"
-                  value={Step?.label}
-                  onChange={onChangeNewStep}
+                  value={step?.label}
+                  onChange={onChange}
                   placeholder="Enter your step name"
+                  isInvalid={errors.label && true}
+                  required
+                  autoFocus
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors?.label && (
-              <Alert variant="danger">{inputErrors?.label}</Alert>
+            {errors.label && (
+              <FormFeedback className="d-block">{errors.label}</FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -370,14 +271,16 @@ function CreateStepModal({
                 <Form.Control
                   type="text"
                   name="abrv"
-                  value={Step?.abrv}
-                  onChange={onChangeNewStep}
+                  value={step?.abrv}
+                  onChange={onChange}
                   placeholder="Enter your step name abbreviation"
+                  isInvalid={errors.abrv && true}
+                  required
                 />
               </InputGroup>
             </Form.Group>
-            {inputErrors?.abrv && (
-              <Alert variant="danger">{inputErrors?.abrv}</Alert>
+            {errors.abrv && (
+              <FormFeedback className="d-block">{errors.abrv}</FormFeedback>
             )}
           </Col>
           <Col className="mb-3">
@@ -385,15 +288,13 @@ function CreateStepModal({
               <Form.Label>Select an icon</Form.Label>
               <Select
                 options={icons}
-                value={Step?.icone}
+                /* value={step?.icone} */
                 name="icone"
-                onChange={onChangeIcon}
+                onChange={onChangeIconFromList}
                 isDisabled={showUploadIcon}
               />
             </Form.Group>
-            {inputErrors?.icone && (
-              <Alert variant="danger">{inputErrors?.icone}</Alert>
-            )}
+            {errors?.icone && <Alert variant="danger">{errors?.icone}</Alert>}
           </Col>
           <Col>
             <Form.Group className="mb-3">
@@ -406,7 +307,7 @@ function CreateStepModal({
                 onClick={() => setShowUploadIcon(!showUploadIcon)}
                 style={{ cursor: "pointer" }}
               >
-                Upload your own ?
+                Upload your personal icon ?
               </Form.Label>
               {showUploadIcon && (
                 <div className="d-xl-flex align-items-center">
@@ -430,6 +331,7 @@ function CreateStepModal({
                           type="file"
                           name="file"
                           onChange={onChangeFile}
+                          required
                         />
                         <div className="d-md-block text-start">
                           <div className="fw-normal text-dark mb-1">
@@ -444,44 +346,33 @@ function CreateStepModal({
                   </div>
                 </div>
               )}
-              {inputErrors?.raw && (
-                <Alert variant="danger">{inputErrors?.raw}</Alert>
-              )}
-              {backErrors?.Error && (
-                <Alert variant="danger">{backErrors?.Error} </Alert>
-              )}
-              {backErrors?.required && (
-                <Alert variant="danger">{backErrors?.required} </Alert>
-              )}
-              {backErrors?.exist && (
-                <Alert variant="danger">{backErrors?.exist} </Alert>
-              )}
+              {errors?.ops && <Alert variant="danger">{errors?.ops}</Alert>}
             </Form.Group>
           </Col>
-        </form>
+          <Col xs={12} className="text-center mt-4 mb-3 pt-50">
+            <Button
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              type="submit"
+              className="btn btn-success"
+            >
+              {loadingApi ? (
+                <Spinner animation="border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </Col>
+        </Form>
       </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="link"
-          className="text-white ms-auto btn btn-danger"
-          onClick={() => setShowCreateStepModal(false)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleSubmitCreateStep}
-          className="btn btn-success"
-        >
-          {loadingApi ? (
-            <Spinner animation="border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-          ) : (
-            "Create"
-          )}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 }

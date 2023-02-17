@@ -33,6 +33,7 @@ function SendSuiviEmailModal({
     await axios
       .post(ApiLinks.Orders.sendIsFollowedEmail + selectedOrder)
       .then((res) => {
+        refresh();
         console.log(res);
       })
       .catch((err) => {

@@ -1,9 +1,11 @@
+// ** react imports
 import React, { useState } from "react";
-//--------------------------------------------------------------
-import jwt from "jwt-decode";
-//--------------------------------------------------------------
+import { Link, Redirect, useHistory, useLocation } from "react-router-dom";
+// ** ** icons imports
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faUnlockAlt } from "@fortawesome/free-solid-svg-icons";
+import BgImage from "../../../assets/img/illustrations/signin.svg";
+// ** bootstrap imports
 import {
   Col,
   Row,
@@ -13,13 +15,10 @@ import {
   FormCheck,
   Container,
   InputGroup,
-  faAngleLeft,
+  Spinner,
 } from "@themesberg/react-bootstrap";
-//--------------------------------------------------------------
-import { Alert } from "@themesberg/react-bootstrap";
-import { Link, Redirect, useHistory, useLocation } from "react-router-dom";
-import BgImage from "../../../assets/img/illustrations/signin.svg";
-//--------------------------------------------------------------
+import { FormFeedback } from "reactstrap";
+// ** Api config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
@@ -34,15 +33,15 @@ export default () => {
     return <Redirect to={state?.from || Routes.Home.path} />;
   }
   // ** errors states
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  const [isWrong, setIsWrong] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [apiLoading, setApiLoading] = useState(false);
   // ** initial state
   const initialState = {
     Email: "",
     Password: "",
     remember: false,
   };
+  // ** states
   const [user, setUser] = useState({
     ...initialState,
   });
@@ -54,55 +53,63 @@ export default () => {
   // ** on Submit
   const onSubmit = async (event) => {
     event.preventDefault();
-    setBackErrors({});
-    setInputErrors({});
-    setIsWrong(false);
-    setInputErrors(validate(user));
-    if (Object.keys(inputErrors).length === 0) {
-      await axios
-        .post(ApiLinks.Auth.login, user)
-        .then((res) => {
-          if (res?.status === 200) {
-            const Token = res?.data?.Token;
-            if (Token) {
-              localStorage.setItem("Token", Token);
-              navigate.push(Routes.Home.path);
-            }
-          }
-        })
-        .catch((err) => {
-          // ** user doesn't exists
-          if (err?.response?.status === 409) {
-            setBackErrors({
-              ...backErrors,
-              Email: "This's user doesn't exist",
-            });
-            setUser({ ...user, Email: "", Password: "" });
-          }
-          // ** wrong password
-          else if (err?.response?.status === 401) {
-            setIsWrong(true);
-            setUser({ ...user, Password: "" });
-          }
-          // ** server error
-          else if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
+    setErrors({});
+    setApiLoading(true);
+    const frontErrors = validate(user);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
     }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.post(ApiLinks.Auth.login, user);
+        if (res?.status === 200) {
+          const Token = res?.data?.Token;
+          if (Token) {
+            localStorage.setItem("Token", Token);
+            navigate.push(Routes.Home.path);
+          }
+        }
+      } catch (err) {
+        // ** user doesn't exists
+        if (err?.response?.status === 409) {
+          setErrors({
+            Email: "This's user doesn't exist",
+          });
+          setUser({ ...user, Email: "", Password: "" });
+        }
+        // ** wrong password
+        else if (err?.response?.status === 401) {
+          setErrors({
+            Password: "This's user doesn't exist",
+          });
+          setUser({ ...user, Password: "" });
+        }
+        // ** server error
+        else if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
+    }
+    setApiLoading(false);
   };
   // ** validater
   const validate = (values) => {
     const errors = {};
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+    // exist
     if (!values.Email) {
       errors.Email = "Email is required!";
-    } else if (!regex.test(values.Email)) {
+    }
+    // format
+    else if (!regex.test(values.Email)) {
       errors.Email = "This is not a valid email format!";
     }
+    // exist
     if (!values.Password) {
       errors.Password = "Password is required";
-    } else if (values.Password.length < 6) {
+    }
+    // value
+    else if (values.Password.length < 6) {
       errors.Password = "Password must be more than 6 characters";
     }
     return errors;
@@ -145,19 +152,20 @@ export default () => {
                         autoFocus
                         type="email"
                         placeholder="example@company.com"
+                        isInvalid={errors.Email && true}
                         name="Email"
                         value={user?.Email}
                         onChange={onChange}
                         required
                       />
                     </InputGroup>
+                    {errors.Email && (
+                      <FormFeedback className="d-block">
+                        {errors.Email}
+                      </FormFeedback>
+                    )}
                   </Form.Group>
-                  {inputErrors.Email && (
-                    <Alert variant="danger">{inputErrors.Email}</Alert>
-                  )}
-                  {backErrors.Email && (
-                    <Alert variant="danger">{backErrors.Email}</Alert>
-                  )}
+
                   <Form.Group>
                     <Form.Group id="password" className="mb-4">
                       <Form.Label>Your Password</Form.Label>
@@ -171,16 +179,17 @@ export default () => {
                           name="Password"
                           value={user?.Password}
                           onChange={onChange}
+                          isInvalid={errors.Password && true}
                           required
                         />
                       </InputGroup>
+                      {errors.Password && (
+                        <FormFeedback className="d-block">
+                          {errors.Password}
+                        </FormFeedback>
+                      )}
                     </Form.Group>
-                    {inputErrors.Password && (
-                      <Alert variant="danger">{inputErrors.Password}</Alert>
-                    )}
-                    {isWrong && (
-                      <Alert variant="danger">Password is wrong</Alert>
-                    )}
+
                     <div className="d-flex justify-content-between align-items-center mb-4">
                       <Form.Check>
                         <FormCheck.Input
@@ -188,7 +197,6 @@ export default () => {
                           className="me-2"
                           defaultValue={true}
                           name="remember"
-                          /* value={true} */
                           onChange={onChange}
                         />
                         <FormCheck.Label
@@ -209,7 +217,11 @@ export default () => {
                   </Form.Group>
 
                   <Button variant="primary" type="submit" className="w-100">
-                    Sign in
+                    {apiLoading ? (
+                      <Spinner animation="border" variant="dark" />
+                    ) : (
+                      "Sign in"
+                    )}
                   </Button>
                 </Form>
                 <div className="d-flex justify-content-center align-items-center mt-4">

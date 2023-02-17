@@ -24,6 +24,7 @@ function DeleteOrderModal({
   showDeleteOrderModal,
   setShowDeleteOrderToast,
   selectedOrder,
+  refresh,
 }) {
   const { Auth, setAuth } = useAuth();
   const Token = localStorage.getItem("Token");
@@ -40,7 +41,9 @@ function DeleteOrderModal({
       })
       .then((res) => {
         if (res?.status === 200) {
+          refresh();
           setShowDeleteOrderToast(true);
+
           setShowDeleteOrderModal(false);
         }
       })

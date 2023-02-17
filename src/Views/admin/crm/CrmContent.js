@@ -62,17 +62,17 @@ function CrmContent() {
         if (err?.response?.status === 400) {
           setAuth(false);
           localStorage.removeItem("admin_token");
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.response?.status === 401) {
           setAuth(false);
           localStorage.removeItem("admin_token");
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.response?.status === 403) {
           setAuth(false);
           localStorage.removeItem("admin_token");
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.response?.status === 404) {
           navigate.push(Routes.NotFound.path);
@@ -186,7 +186,9 @@ function CrmContent() {
                       </span>
                     </td>
                     <td>
-                      <span className="fw-normal text-centre">{createdAt}</span>
+                      <span className="fw-normal text-centre">
+                        {new Date(createdAt).toLocaleDateString()}
+                      </span>
                     </td>
                     <td>
                       <OverlayTrigger

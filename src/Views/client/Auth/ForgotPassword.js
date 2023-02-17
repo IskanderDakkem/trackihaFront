@@ -1,9 +1,10 @@
-//---------------------------------------------------------------------------------
+// ** react imports
 import React, { useState } from "react";
 import { Link, Redirect, useLocation } from "react-router-dom";
-//---------------------------------------------------------------------------------
+// ** icons imports
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleLeft } from "@fortawesome/free-solid-svg-icons";
+// ** bootstrap imports
 import {
   Col,
   Row,
@@ -14,13 +15,14 @@ import {
   InputGroup,
   Alert,
 } from "@themesberg/react-bootstrap";
-//---------------------------------------------------------------------------------
+// ** API config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
 //---------------------------------------------------------------------------------
 export default () => {
+  // ** router
   const { Auth } = useAuth();
   const { state } = useLocation();
   if (Auth !== null) {

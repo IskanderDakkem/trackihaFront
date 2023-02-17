@@ -86,7 +86,7 @@ function DeleteOfferModal({
       <Modal.Footer>
         <Button
           variant="link"
-          className="text-black ms-auto btn btn-danger"
+          className="text-white ms-auto btn btn-danger"
           onClick={() => setShowDeleteOfferModal(false)}
         >
           Cancel

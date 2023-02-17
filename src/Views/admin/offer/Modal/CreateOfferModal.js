@@ -61,20 +61,18 @@ function CreateOfferModal({ showCreateOfferModal, setShowCreateOfferModal }) {
           if (err?.response?.status === 401) {
             /* setAuth(null);
             localStorage.removeItem("Token"); */
-            navigate.push(Routes.Signin.path);
+            navigate.push(Routes.SigninAdmin.path);
           }
           if (err?.response?.status === 404) {
             navigate.push(Routes.NotFound.path);
           }
           if (err?.response?.status === 406) {
             setBackErrors({
-              ...backErrors,
               required: "All informations are required!",
             });
           }
           if (err?.response?.status === 409) {
             setBackErrors({
-              ...backErrors,
               CompanyEmail: "This email is already used!",
             });
           }

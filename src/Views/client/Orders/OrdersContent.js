@@ -1,17 +1,8 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
-//--------------------------------------------------------------
+// ** icons
 import { RefreshCw } from "react-feather";
-//--------------------------------------------------------------
-import timer from "../../../assets/img/notification/timer.png";
-import mail from "../../../assets/img/notification/mail.png";
-import airMail from "../../../assets/img/notification/air-mail.png";
-//--------------------------------------------------------------
-import { Routes } from "../../../Context/routes";
-import ApiLinks from "../../../Context/ApiLinks";
-import axios from "../../../Context/Axios";
-import useAuth from "../../../Context/useAuth";
-//--------------------------------------------------------------
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
@@ -25,6 +16,15 @@ import {
   faEnvelope,
   faEllipsisH,
 } from "@fortawesome/free-solid-svg-icons";
+import timer from "../../../assets/img/notification/timer.png";
+import mail from "../../../assets/img/notification/mail.png";
+import airMail from "../../../assets/img/notification/air-mail.png";
+// **  API config
+import { Routes } from "../../../Context/routes";
+import ApiLinks from "../../../Context/ApiLinks";
+import axios from "../../../Context/Axios";
+import useAuth from "../../../Context/useAuth";
+// ** Bootstrap
 import {
   Col,
   Row,
@@ -40,32 +40,25 @@ import {
   Button,
   Dropdown,
 } from "@themesberg/react-bootstrap";
-//--------------------------------------------------------------
+// ** Modals
 import CreateOrderModal from "./Modals/CreateOrderModal";
-import CreateOrderToast from "./Toasts/CreateOrderToast";
-//--------------------------------------------------------------
-import ViewOrderModal from "./Modals/ViewOrderModal";
-//--------------------------------------------------------------
 import DeleteOrderModal from "./Modals/DeleteOrderModal";
-import DeleteOrderToast from "./Toasts/DeleteOrderToast";
-//--------------------------------------------------------------
+import ViewOrderModal from "./Modals/ViewOrderModal";
 import UpdateOrderModal from "./Modals/UpdateOrderModal";
-import UpdateOrderToast from "./Toasts/UpdateOrderToast";
-//--------------------------------------------------------------
 import SendSuiviEmailModal from "./EmailsModal/SendSuiviEmailModal";
-//--------------------------------------------------------------
 import DeliverOrderModal from "./EmailsModal/DeliverOrderModal";
-import DeliverOrderToast from "./Toasts/DeliverOrderToast";
-//--------------------------------------------------------------
+import CancelOrderModal from "./EmailsModal/CancelOrderModal";
+import SendEmailModal from "./EmailsModal/SendEmailModal";
 import SendIsLateModal from "./EmailsModal/SendIsLateModal";
-//--------------------------------------------------------------
+// ** toasts
+import CreateOrderToast from "./Toasts/CreateOrderToast";
+import DeleteOrderToast from "./Toasts/DeleteOrderToast";
+import UpdateOrderToast from "./Toasts/UpdateOrderToast";
+import DeliverOrderToast from "./Toasts/DeliverOrderToast";
 import SuiviToast from "./Toasts/SuiviToast";
 //--------------------------------------------------------------
-import CancelOrderModal from "./EmailsModal/CancelOrderModal";
-//--------------------------------------------------------------
-import SendEmailModal from "./EmailsModal/SendEmailModal";
-//--------------------------------------------------------------
 function OrdersContent({ clientId }) {
+  // ** router
   const { Auth, setAuth, paginationNumber } = useAuth();
   let Token = localStorage.getItem("Token");
   let searchedId = Auth;
@@ -73,20 +66,29 @@ function OrdersContent({ clientId }) {
     searchedId = clientId;
   }
   const navigate = useHistory();
-  //--------------------------------------------------------------
-  const [Orders, setOrders] = useState([]); //Getting the Orders
+  // ** initial states
+  let pagesNumber = [];
+  // ** states
+  const [Orders, setOrders] = useState([]);
   const [rowPerPage, setRowPerPage] = useState(1);
   const [limitPerPage, setLimitPerPage] = useState(paginationNumber);
   const [OrdersNumber, setOrdersNumber] = useState(0);
-  //--------------------------------------------------------------
-  let pagesNumber = [];
+  const [selectedOrder, setSelectedOrder] = useState(0);
   for (let i = 1; i < OrdersNumber / limitPerPage + 1; i++) {
     pagesNumber.push(i);
   }
-  //--------------------------------------------------------------
+  // ** fetch data
+  useEffect(() => {
+    if (searchedId !== null && searchedId !== undefined && searchedId !== 0) {
+      getCLientOrders();
+    }
+  }, [
+    rowPerPage, // ** when pagination is triggered
+  ]);
+  // ** functions
   const getCLientOrders = async () => {
-    await axios
-      .get(
+    try {
+      const res = await axios.get(
         ApiLinks.Orders.getUserOrders +
           searchedId +
           `/${rowPerPage}/${limitPerPage}`,
@@ -95,34 +97,31 @@ function OrdersContent({ clientId }) {
             Authorization: `Bearer ${Token}`,
           },
         }
-      )
-      .then((res) => {
-        if (res?.status === 200) {
-          setOrders((prev) => [...res?.data?.items]);
-          setOrdersNumber((prev) => res?.data?.count);
-        }
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response?.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
+      );
+      if (res?.status === 200) {
+        setOrders((prev) => [...res?.data?.items]);
+        setOrdersNumber((prev) => res?.data?.count);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
   };
-
-  //--------------------------------------------------------------
+  // ** pagination
   const PaginatePage = (pageNumber) => {
     setRowPerPage((prev) => pageNumber);
     getCLientOrders();
@@ -137,62 +136,39 @@ function OrdersContent({ clientId }) {
       setRowPerPage((prev) => prev + 1);
     }
   };
-  //---------------------------------------------------------------------
+  // ** create modal
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false); //Create
-  const [showDeleteOrderModal, setShowDeleteOrderModal] = useState(false); //Delete
-  const [showUpdateOrderModal, setShowUpdateOrderModal] = useState(false); //Update
-  const [showViewOrderModal, setShowViewOrderModal] = useState(false); //View
-  //---------------------------------------------------------------------
   const [showCreateOrderToast, setShowCreateOrderToast] = useState(false); //Create
+  // ** delete modal
+  const [showDeleteOrderModal, setShowDeleteOrderModal] = useState(false); //Delete
   const [showDeleteOrderToast, setShowDeleteOrderToast] = useState(false); //Delete
-  const [showUpdateOrderToast, setShowUpdateOrderToast] = useState(false); //Update
-  const [showSendEmailModal, setShowSendEmaiModal] = useState(false); //Send
-  //---------------------------------------------------------------------
-  const [sendSuiviEmailModal, setSendSuiviEmailModal] = useState(false);
-  const [sendIsLateModal, setSendIsLateModal] = useState(false);
-  const [sendIsDeliveredModal, setSendIsDeliveredModal] = useState(false);
-  const [cancelOrder, setCancelOrderModal] = useState(false);
-  //---------------------------------------------------------------------
-  const [sendSuiviEmailToast, setSendSuiviEmailToast] = useState(false);
-  const [sendIsLateEmailToast, setSendIsLateEmailToast] = useState(false);
-  const [sendIsDeliveredToast, setSendIsDeliveredToast] = useState(false);
-  const [cancelOrderToast, setCancelOrderToast] = useState(false);
-  //---------------------------------------------------------------------
-
-  useEffect(() => {
-    if (searchedId !== null && searchedId !== undefined && searchedId !== 0) {
-      getCLientOrders();
-    }
-  }, [
-    rowPerPage, // ** when pagination is triggered
-    showDeleteOrderToast, // ** order deleted
-    showUpdateOrderToast, // ** order updated
-    showCreateOrderToast, // ** order created
-    showCreateOrderModal, // ** order created
-    showDeleteOrderModal, // ** order deleted
-    showUpdateOrderModal, // ** order updated
-    showViewOrderModal, // ** view order
-    sendSuiviEmailModal, // ** suivi
-    sendIsLateModal, // ** late
-    sendIsDeliveredModal, // ** delivered
-    cancelOrder, // ** canceled
-  ]);
-  //---------------------------------------------------------------------
-  const [selectedOrder, setSelectedOrder] = useState(0);
-  //---------------------------------------------------------------------
-  const handleShowViewOrderModal = (company) => {
-    setShowViewOrderModal(true);
-    setSelectedOrder((prev) => company);
-  };
   const handleDeleteOrderModal = (id) => {
     setShowDeleteOrderModal(true);
     setSelectedOrder((prev) => id);
   };
+  // ** update order modal
+  const [showUpdateOrderModal, setShowUpdateOrderModal] = useState(false); //Update
+  const [showUpdateOrderToast, setShowUpdateOrderToast] = useState(false); //Update
   const handleUpdateOrderModal = (id) => {
     setShowUpdateOrderModal(true);
     setSelectedOrder((prev) => id);
   };
-  //---------------------------------------------------------------------
+  // ** view orders
+  const [showViewOrderModal, setShowViewOrderModal] = useState(false); //View
+  const handleShowViewOrderModal = (company) => {
+    setShowViewOrderModal(true);
+    setSelectedOrder((prev) => company);
+  };
+
+  const [showSendEmailModal, setShowSendEmaiModal] = useState(false); //Send
+  const [sendSuiviEmailModal, setSendSuiviEmailModal] = useState(false);
+  const [sendIsLateModal, setSendIsLateModal] = useState(false);
+  const [sendIsDeliveredModal, setSendIsDeliveredModal] = useState(false);
+  const [cancelOrder, setCancelOrderModal] = useState(false);
+  const [sendSuiviEmailToast, setSendSuiviEmailToast] = useState(false);
+  const [sendIsLateEmailToast, setSendIsLateEmailToast] = useState(false);
+  const [sendIsDeliveredToast, setSendIsDeliveredToast] = useState(false);
+  const [cancelOrderToast, setCancelOrderToast] = useState(false);
   const handleSendEmailModal = (order) => {
     setShowSendEmaiModal(true);
     setSelectedOrder((prev) => order);
@@ -213,7 +189,7 @@ function OrdersContent({ clientId }) {
     setCancelOrderModal(true);
     setSelectedOrder((prev) => id);
   };
-  //--------------------------------------------------------------------
+  // ** ==>
   return (
     <>
       {/* ------------------------------------------------------------------------ */}
@@ -284,10 +260,7 @@ function OrdersContent({ clientId }) {
                   isLivraison,
                   state,
                   IsCancel,
-                  /* crmLink,
-                  deliveryCompanyLink, */
                 } = order;
-
                 const orderNotification = {
                   src: "",
                   grayScale: "",
@@ -328,7 +301,6 @@ function OrdersContent({ clientId }) {
                         className="link-info text-decoration-underline"
                       >
                         {trackingCode}
-                        {/* <span className="fw-normal w-100 "></span> */}
                       </Link>
                     </td>
                     <td>
@@ -568,35 +540,6 @@ function OrdersContent({ clientId }) {
                         </Dropdown.Menu>
                       </Dropdown>
                       {/* End of dropdown */}
-                      {/* <OverlayTrigger
-                        placement="bottom"
-                        trigger={["hover", "focus"]}
-                        overlay={<Tooltip>Delete the order</Tooltip>}
-                      >
-                        <button
-                          className="btn btn-danger p-2 ms-2"
-                          onClick={() => handleDeleteOrderModal(id)}
-                        >
-                          <FontAwesomeIcon
-                            icon={faTrashAlt}
-                            className="icon-dark"
-                          />
-                        </button>
-                      </OverlayTrigger> */}
-                      {/* <OverlayTrigger
-                        placement="bottom"
-                        trigger={["hover", "focus"]}
-                        overlay={<Tooltip>Cancel the order</Tooltip>}
-                      >
-                        <Button
-                          disabled={IsCancel || isLivraison ? true : false}
-                          onClick={() => handleCancelOrder(id)}
-                          className="btn btn-danger p-2 ms-2"
-                        >
-                          <FontAwesomeIcon icon={faBan} className="icon-dark" />
-                        </Button>
-                      </OverlayTrigger> */}
-
                       <OverlayTrigger
                         placement="bottom"
                         trigger={["hover", "focus"]}
@@ -632,24 +575,6 @@ function OrdersContent({ clientId }) {
                           />
                         </Button>
                       </OverlayTrigger>
-                      {/* <OverlayTrigger
-                        placement="bottom"
-                        trigger={["hover", "focus"]}
-                        overlay={<Tooltip>Update order to be late</Tooltip>}
-                      >
-                        <Button
-                          disabled={
-                            isRetarded || isLivraison || IsCancel ? true : false
-                          }
-                          className="btn btn-warning p-2 ms-2"
-                          onClick={() => handleSendIsLateModal(id)}
-                        >
-                          <FontAwesomeIcon
-                            icon={faClock}
-                            className="icon-dark"
-                          />
-                        </Button>
-                      </OverlayTrigger> */}
                     </td>
                   </tr>
                 );
@@ -700,6 +625,7 @@ function OrdersContent({ clientId }) {
         showCreateOrderModal={showCreateOrderModal}
         setShowCreateOrderModal={setShowCreateOrderModal}
         setShowCreateOrderToast={setShowCreateOrderToast}
+        refresh={getCLientOrders}
       />
       {/* Create company notification */}
       <CreateOrderToast
@@ -711,6 +637,7 @@ function OrdersContent({ clientId }) {
         showViewOrderModal={showViewOrderModal}
         setShowViewOrderModal={setShowViewOrderModal}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       {/* ------------------------------------------------------------------------ */}
       <DeleteOrderModal
@@ -718,6 +645,7 @@ function OrdersContent({ clientId }) {
         setShowDeleteOrderModal={setShowDeleteOrderModal}
         setShowDeleteOrderToast={setShowDeleteOrderToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       <DeleteOrderToast
         showDeleteOrderToast={showDeleteOrderToast}
@@ -729,6 +657,7 @@ function OrdersContent({ clientId }) {
         setShowUpdateOrderModal={setShowUpdateOrderModal}
         setShowUpdateOrderToast={setShowUpdateOrderToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       <UpdateOrderToast
         setShowUpdateOrderToast={setShowUpdateOrderToast}
@@ -743,6 +672,7 @@ function OrdersContent({ clientId }) {
         setSendIsLateEmailToast={setSendIsLateEmailToast}
         setSendIsDeliveredToast={setSendIsDeliveredToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       {/* ------------------------------------------------------------------------ */}
       {/* delivery order modal */}
@@ -751,6 +681,7 @@ function OrdersContent({ clientId }) {
         sendIsDeliveredModal={sendIsDeliveredModal}
         setSendIsDeliveredModal={setSendIsDeliveredModal}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       <DeliverOrderToast
         sendIsDeliveredToast={sendIsDeliveredToast}
@@ -763,6 +694,7 @@ function OrdersContent({ clientId }) {
         setSendSuiviEmailModal={setSendSuiviEmailModal}
         setSendSuiviEmailToast={setSendSuiviEmailToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       {/* send late email */}
       <SendIsLateModal
@@ -770,6 +702,7 @@ function OrdersContent({ clientId }) {
         setSendIsLateModal={setSendIsLateModal}
         setSendIsLateEmailToast={setSendIsLateEmailToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
       {/* ------------------------------------------------------------------------ */}
       <SuiviToast
@@ -781,6 +714,7 @@ function OrdersContent({ clientId }) {
         setCancelOrderModal={setCancelOrderModal}
         setCancelOrderToast={setCancelOrderToast}
         selectedOrder={selectedOrder}
+        refresh={getCLientOrders}
       />
     </>
   );

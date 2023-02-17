@@ -1,34 +1,44 @@
+// ** react imports
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useHistory } from "react-router-dom";
-//---------------------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Modal,
   Button,
   Form,
   InputGroup,
-  Alert,
   Spinner,
 } from "@themesberg/react-bootstrap";
-//---------------------------------------------------------------------
+// **  Api config
 import { Routes } from "../../../../Context/routes";
 import ApiLinks from "../../../../Context/ApiLinks";
 import axios from "../../../../Context/Axios";
+import { FormFeedback } from "reactstrap";
 //---------------------------------------------------------------------
 function CreateUserModal({
   showCreateUserModal,
   setShowCreateUserModal,
   setShowCreateUserToast,
+  refresh,
 }) {
+  // ** router
   const Token = localStorage.getItem("Token");
   const navigate = useHistory();
-  //-----------------------------------------------------------------
+  // ** initial state
+  const initialeState = {
+    Email: "",
+    CompanyName: "",
+    ResponsableName: "",
+    Tel: "",
+  };
+  // ** states
   const [apiLoading, setApiLoading] = useState(false);
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
+  const [errors, setErrors] = useState({});
+  const [newUser, setNewUser] = useState({ ...initialeState });
   //-----------------------------------------------------------------
-  const [offers, setOffers] = useState([]);
+  /* const [offers, setOffers] = useState([]);
   const getOffers = async () => {
     await axios
       .get(ApiLinks.offers.getAll, {
@@ -45,206 +55,185 @@ function CreateUserModal({
   };
   useEffect(() => {
     getOffers();
-  }, [showCreateUserModal]);
-  const initialeState = {
-    CompanyName: "",
-    ResponsableName: "",
-    Email: "",
-    Tel: "",
-    offerId: "",
-  };
-  const [newUser, setNewUser] = useState(initialeState);
-  const onChangeNewUser = (event) => {
+  }, [showCreateUserModal]); */
+  // ** on change
+  const onChange = (event) => {
     const { name, value } = event.target;
     setNewUser({ ...newUser, [name]: value });
   };
-  const onSubmitNewUser = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setBackErrors({});
-    setInputErrors({});
-    setInputErrors(validate(newUser));
+    setErrors({});
     setApiLoading(true);
-    if (Object.keys(inputErrors).length === 0) {
-      await axios
-        .post(ApiLinks.Users.create, newUser, {
-          headers: {
-            Authorization: `Bearer ${Token}`,
-          },
-        })
-        .then((res) => {
-          if (res?.status === 201) {
-            setShowCreateUserModal(false);
-            setNewUser(initialeState);
-            setShowCreateUserToast(true);
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setBackErrors({ ...backErrors, ops: "Something went wrong" });
-          }
-          if (err?.response?.status === 401) {
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 403) {
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 406) {
-            setBackErrors({
-              ...backErrors,
-              required: "All informations are required!",
-            });
-          }
-          if (
-            err?.response?.status === 409 &&
-            err?.response?.status.data === 2
-          ) {
-            setBackErrors({
-              ...backErrors,
-              PhoneNumber: "This phone number is already used!",
-            });
-          } else if (
-            err?.response?.status === 422 &&
-            err?.response?.status.data === 2
-          ) {
-            setBackErrors({
-              ...backErrors,
-              PhoneNumber: "This is not a valid phone number format!",
-            });
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
+    const frontErrors = validate(newUser);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.post(ApiLinks.Auth.signup, newUser);
+        if (res?.status === 201) {
+          onHide();
+          refresh();
+          setShowCreateUserToast();
+        }
+      } catch (err) {
+        //
+        if (err?.response?.status === 409 && err?.response?.data?.code === 1) {
+          setErrors({
+            Email: "This email is already used!",
+          });
+        }
+        //
+        else if (
+          err?.response?.status === 409 &&
+          err?.response?.data?.code === 2
+        ) {
+          setErrors({
+            Tel: "This phone number is already used!",
+          });
+        }
+        //
+        else if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
     }
     setApiLoading(false);
   };
+  // ** on validate
   const validate = (values) => {
     const errors = {};
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+    //Validate email
     if (!values.Email) {
       errors.Email = "Email is required!";
     } else if (!regex.test(values.Email)) {
       errors.Email = "This is not a valid email format!";
     }
-    //validate the company name
+    //Validate companyName
     if (!values.CompanyName) {
       errors.CompanyName = "Company name is required!";
     }
-    //Validate the company responsable name
+    //Validate responsable name
     if (!values.ResponsableName) {
-      errors.ResponsableName =
-        "The responsable for this comapany name is required!";
+      errors.ResponsableName = "Responsable name is required!";
     }
-    //Validate the phone number
+    //validate phone number
     if (!values.Tel) {
       errors.Tel = "Phone number is required!";
     } else if (!values.Tel.match("[0-9]{10}")) {
-      errors.Tel = "Please provide valid phone number!";
+      errors.Tel = "this is not a valid phone number format!";
     }
     return errors;
   };
-  //-----------------------------------------------------------------
+  // ** on hide
+  const onHide = () => {
+    setShowCreateUserModal();
+    setErrors({});
+    setNewUser({ ...initialeState });
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showCreateUserModal}
-      onHide={() => setShowCreateUserModal(false)}
+      onHide={onHide}
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowCreateUserModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
-        <h5 className="mb-4">Create a user</h5>
-        <Form>
+        <h5 className="mb-4">Create Account</h5>
+        <Form onSubmit={onSubmit}>
           <Col /* md={6} */ className="mb-3">
-            <Form.Group id="firstName">
+            <Form.Group className="mb-4">
               <Form.Label>Company Name</Form.Label>
-              <InputGroup id="email">
+              <InputGroup>
                 <Form.Control
-                  required
+                  autoFocus
                   type="text"
                   name="CompanyName"
-                  value={newUser?.CompanyName}
-                  onChange={onChangeNewUser}
-                  placeholder="Enter your company name"
-                />
-              </InputGroup>
-            </Form.Group>
-            {inputErrors.CompanyName && (
-              <Alert variant="danger">{inputErrors.CompanyName}</Alert>
-            )}
-          </Col>
-          <Col /* md={6} */ className="mb-3">
-            <Form.Group id="firstName">
-              <Form.Label>Responsable Name</Form.Label>
-              <InputGroup id="email">
-                <Form.Control
+                  value={newUser.CompanyName}
+                  onChange={onChange}
+                  isInvalid={errors.CompanyName && true}
+                  placeholder="company name ..."
                   required
-                  type="text"
-                  name="ResponsableName"
-                  value={newUser?.ResponsableName}
-                  onChange={onChangeNewUser}
-                  placeholder="Enter your company name"
                 />
               </InputGroup>
+              {errors.CompanyName && (
+                <FormFeedback className="d-block">
+                  {errors.CompanyName}
+                </FormFeedback>
+              )}
             </Form.Group>
-            {inputErrors.ResponsableName && (
-              <Alert variant="danger">{inputErrors.ResponsableName}</Alert>
-            )}
           </Col>
+          <Form.Group className="mb-4">
+            <Form.Label>Responsable Name</Form.Label>
+            <InputGroup>
+              <Form.Control
+                type="text"
+                name="ResponsableName"
+                value={newUser.ResponsableName}
+                onChange={onChange}
+                placeholder="Responsable name ..."
+                isInvalid={errors.ResponsableName && true}
+                required
+              />
+            </InputGroup>
+            {errors.ResponsableName && (
+              <FormFeedback className="d-block">
+                {errors.ResponsableName}
+              </FormFeedback>
+            )}
+          </Form.Group>
           <Col /* md={6} */ className="mb-3">
-            <Form.Group>
+            <Form.Group className="mb-4">
               <Form.Label>Email</Form.Label>
               <InputGroup>
                 <Form.Control
-                  required
-                  type="text"
+                  type="email"
                   name="Email"
-                  value={newUser?.Email}
-                  onChange={onChangeNewUser}
-                  placeholder="Enter your company email"
+                  value={newUser.Email}
+                  onChange={onChange}
+                  isInvalid={errors.Email && true}
+                  placeholder="example@company.com"
+                  required
                 />
               </InputGroup>
+              {errors.Email && (
+                <FormFeedback className="d-block">{errors.Email}</FormFeedback>
+              )}
             </Form.Group>
-            {inputErrors.Email && (
-              <Alert variant="danger">{inputErrors.Email}</Alert>
-            )}
-            {backErrors.Email && (
-              <Alert variant="danger">{backErrors.Email}</Alert>
-            )}
           </Col>
           <Col /* md={6} */ className="mb-3">
-            <Form.Group id="phone">
-              <Form.Label>Phone Number</Form.Label>
-              <Form.Control
-                required
-                type="number"
-                placeholder="+XX-XXX XXX XXX"
-                name="Tel"
-                value={newUser?.Tel}
-                onChange={onChangeNewUser}
-              />
+            <Form.Group className="mb-4">
+              <Form.Label>Your Phone Number</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="text"
+                  name="Tel"
+                  value={newUser.Tel}
+                  onChange={onChange}
+                  placeholder="+XX-XXX XXX XXX"
+                  isInvalid={errors.Tel && true}
+                  required
+                />
+              </InputGroup>
+              {errors.Tel && (
+                <FormFeedback className="d-block">{errors.Tel}</FormFeedback>
+              )}
             </Form.Group>
-            {inputErrors.Tel && (
-              <Alert variant="danger">{inputErrors.Tel}</Alert>
-            )}
-            {backErrors.Tel && <Alert variant="danger">{backErrors.Tel}</Alert>}
           </Col>
-          <Col className="mb-3">
+          {/* <Col className="mb-3">
             <Form.Group>
               <Form.Label>Select an offer</Form.Label>
               <Form.Select
                 name="offerId"
                 value={newUser?.offerId}
-                onChange={onChangeNewUser}
+                onChange={onChange}
               >
                 <option defaultValue>Open this select menu</option>
                 {offers.map((offer) => {
@@ -256,31 +245,30 @@ function CreateUserModal({
                 })}
               </Form.Select>
             </Form.Group>
+          </Col> */}
+          <Col xs={12} className="text-center mt-4 mb-3 pt-50">
+            <Button
+              variant="link"
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              className="btn btn-success"
+              type="submit"
+            >
+              {apiLoading ? (
+                <Spinner animation="border" variant="dark" />
+              ) : (
+                "Create"
+              )}
+            </Button>
           </Col>
         </Form>
       </Modal.Body>
-      <Modal.Footer>
-        {/* If u need to bring them to be justify between, swap the button position */}
-        <Button
-          variant="link"
-          className="text-white ms-auto btn btn-danger"
-          onClick={() => setShowCreateUserModal(false)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
-          className="btn btn-success"
-          type="submit"
-          onClick={onSubmitNewUser}
-        >
-          {apiLoading ? (
-            <Spinner animation="border" variant="dark" />
-          ) : (
-            "Create"
-          )}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 }

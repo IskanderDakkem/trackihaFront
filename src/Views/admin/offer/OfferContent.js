@@ -48,7 +48,7 @@ function OfferContent() {
       })
       .catch((err) => {
         if (err?.response?.status === 401) {
-          navigate.push(Routes.Signin.path);
+          navigate.push(Routes.SigninAdmin.path);
         }
         if (err?.response?.status === 404) {
           navigate.push(Routes.NotFound.path);

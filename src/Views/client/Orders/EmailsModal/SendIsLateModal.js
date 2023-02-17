@@ -42,6 +42,7 @@ function SendIsLateModal({
       )
       .then((res) => {
         if (res?.status == 200) {
+          refresh();
           setSendIsLateModal(false);
           setSendIsLateEmailToast(true);
         }

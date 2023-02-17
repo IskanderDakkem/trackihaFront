@@ -1,8 +1,9 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-//-----------------------------------------------------------------
-import { Modal, Button, Row } from "@themesberg/react-bootstrap";
-//-----------------------------------------------------------------
+// ** bootstrap imports
+import { Modal, Button } from "@themesberg/react-bootstrap";
+// ** API config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { BASE_PATH } from "../../../../Context/Axios";
@@ -14,39 +15,52 @@ function ViewStepsModal({
   setShowViewSequenceSteps,
   SelectedSequence,
 }) {
-  const { Auth, setAuth } = useAuth();
+  // ** router
+  const { setAuth } = useAuth();
   const navigate = useHistory();
   const Token = localStorage.getItem("Token");
+  // ** states
   const [sequenceSteps, setSequenceSteps] = useState([]);
+  // ** fetching data
   useEffect(() => {
-    const getSequenceSteps = async () => {
-      await axios
-        .get(ApiLinks.Sequence.getSequenceSteps + SelectedSequence, {
+    if (showViewSequenceSteps) {
+      fetchOneSequence();
+    }
+  }, [showViewSequenceSteps, SelectedSequence]);
+  // ** functions
+  const fetchOneSequence = async () => {
+    try {
+      const res = await axios.get(
+        ApiLinks.Sequence.getSequenceSteps + SelectedSequence,
+        {
           headers: {
             Authorization: `Bearer ${Token}`,
           },
-        })
-        .then((res) => {
-          const { status, data } = res;
-          if (status === 200) {
-            setSequenceSteps(data?.Steps);
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
-    };
-    getSequenceSteps();
-  }, [setShowViewSequenceSteps, showViewSequenceSteps]);
+        }
+      );
+      if (res?.status === 200) {
+        setSequenceSteps([...res?.data.Steps]);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired token
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** server error
+      else if (err?.response?.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
@@ -70,7 +84,7 @@ function ViewStepsModal({
                 <h6>{label}</h6>
                 <img
                   src={BASE_PATH + icone}
-                  alt=""
+                  alt="step icone"
                   style={{ height: "100px" }}
                 />
               </div>

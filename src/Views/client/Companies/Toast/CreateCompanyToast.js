@@ -23,7 +23,7 @@ function CreateCompanyToast({
             onClick={() => setShowCreateCompanyToast(false)}
           />
         </Toast.Header>
-        <Toast.Body>The company was successfully created</Toast.Body>
+        <Toast.Body>New company was added successfully</Toast.Body>
       </Toast>
     </ToastContainer>
   );

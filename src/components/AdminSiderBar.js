@@ -38,7 +38,7 @@ export default (props = {}) => {
   const logout = () => {
     setAuth(null);
     localStorage.removeItem("Token");
-    history.push(Routes.Signin.path);
+    history.push(Routes.SigninAdmin.path);
   };
   const { pathname } = location;
   //-------------------------------------------------------------------------
@@ -127,7 +127,7 @@ export default (props = {}) => {
                     as={Link}
                     variant="secondary"
                     size="xs"
-                    to={Routes.Signin.path}
+                    to={Routes.SigninAdmin.path}
                     className="text-dark"
                   >
                     <FontAwesomeIcon
@@ -147,11 +147,11 @@ export default (props = {}) => {
               </Nav.Link>
             </div>
             <Nav className="flex-column pt-3 pt-md-0">
-              <NavItem
+              {/* <NavItem
                 title="Trakiha"
-                /* link={Routes.PresentationAdmin.path} */
+                link={Routes.PresentationAdmin.path}
                 image={ReactHero}
-              />
+              /> */}
               <NavItem
                 title="Dashboard"
                 link={Routes.HomeAdmin.path}

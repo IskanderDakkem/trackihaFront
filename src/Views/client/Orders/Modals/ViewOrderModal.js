@@ -1,20 +1,10 @@
 import React from "react";
 import { useState, useEffect } from "react";
-/* import { useHistory } from "react-router-dom"; */
 //----------------------------------------------------------------------------
-import {
-  Col,
-  Modal,
-  Button,
-  Form,
-  /* InputGroup, */
-} from "@themesberg/react-bootstrap";
+import { Col, Modal, Button, Form } from "@themesberg/react-bootstrap";
 //----------------------------------------------------------------------------
-/* import useAuth from "../../../../Context/useAuth"; */
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
-/* import { Routes } from "../../../../Context/routes";
-import { BASE_PATH } from "../../../../Context/Axios"; */
 //----------------------------------------------------------------------------
 function ViewOrderModal({
   setShowViewOrderModal,
@@ -22,8 +12,6 @@ function ViewOrderModal({
   selectedOrder,
 }) {
   const Token = localStorage.getItem("Token");
-  /* const { Auth, setAuth } = useAuth();
-  const navigate = useHistory(); */
   //-----------------------------------------------------------------
   const [newOrder, setOrder] = useState({});
   const getOrder = async () => {
@@ -38,17 +26,20 @@ function ViewOrderModal({
           setOrder((prev) => ({ ...res?.data }));
         }
       })
-      .catch((err) => {});
+      .catch((err) => {
+        console.log("err: ", err);
+      });
   };
   useEffect(() => {
     if (
+      showViewOrderModal &&
       selectedOrder !== null &&
       selectedOrder !== undefined &&
       selectedOrder !== 0
     ) {
       getOrder();
     }
-  }, [showViewOrderModal, selectedOrder]);
+  }, [showViewOrderModal]);
   return (
     <Modal
       as={Modal.Dialog}

@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-//--------------------------------------------------------------
+// ** icons imports
 import { RefreshCw } from "react-feather";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +11,7 @@ import {
   faTrashAlt,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+// ** bootstrap imports
 import {
   Col,
   Row,
@@ -23,24 +25,23 @@ import {
   OverlayTrigger,
   Button,
 } from "@themesberg/react-bootstrap";
-//--------------------------------------------------------------
+// **  Api cofig
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
-//--------------------------------------------------------------
+// ** Modals
 import CreateSequenceModal from "./Modal/CreateSequenceModal";
-import CreateSequeneToast from "./Toast/CreateSequenceToast";
-
 import DeleteSequenceModal from "./Modal/DeleteSequenceModal";
-import DeleteSequenceToast from "./Toast/DeleteSequenceToast";
-
-import ViewStepsModal from "./Modal/ViewStepsModal";
-
 import UpdateSequenceModal from "./Modal/UpdateSequenceModal";
+import ViewStepsModal from "./Modal/ViewStepsModal";
+// ** Toasts
+import CreateSequeneToast from "./Toast/CreateSequenceToast";
+import DeleteSequenceToast from "./Toast/DeleteSequenceToast";
 import UpdateSequenceToast from "./Toast/UpdateSequenceToast";
 //--------------------------------------------------------------
 function SequenceContent({ clientId }) {
+  // ** router
   const { Auth, setAuth, paginationNumber } = useAuth();
   let Token = localStorage.getItem("Token");
   let searchedId = Auth;
@@ -48,22 +49,27 @@ function SequenceContent({ clientId }) {
     searchedId = clientId;
   }
   const navigate = useHistory();
-  //--------------------------------------------------------------
-  /*  const [tableLoading, setTableLoading] = useState(false); */
-  //--------------------------------------------------------------
+  // ** initiale states
+  let pagesNumber = [];
+  // ** states
   const [sequences, setSequences] = useState([]);
   const [rowPerPage, setRowPerPage] = useState(1);
   const [limitPerPage, setLimitPerPage] = useState(paginationNumber);
   const [sequenceNumber, setSequenceNumber] = useState(0);
-  //--------------------------------------------------------------
-  let pagesNumber = [];
+  const [SelectedSequence, setSelectedSequence] = useState(0);
   for (let i = 1; i < sequenceNumber / limitPerPage + 1; i++) {
     pagesNumber.push(i);
   }
-  //--------------------------------------------------------------
+  // ** fetching data
+  useEffect(() => {
+    if (searchedId !== null && searchedId !== 0 && searchedId !== undefined) {
+      getClientSequence();
+    }
+  }, [rowPerPage]);
+  // ** functions
   const getClientSequence = async () => {
-    await axios
-      .get(
+    try {
+      const res = await axios.get(
         ApiLinks.Sequence.getClientSequence +
           searchedId +
           `/${rowPerPage}/${limitPerPage}`,
@@ -72,34 +78,31 @@ function SequenceContent({ clientId }) {
             Authorization: `Bearer ${Token}`,
           },
         }
-      )
-      .then((res) => {
-        if (res?.status === 200) {
-          setSequences((prev) => res?.data?.items);
-          setSequenceNumber(res?.data?.count);
-        }
-      })
-      .catch((err) => {
-        if (err?.response?.status === 401) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response?.status === 403) {
-          setAuth(null);
-          localStorage.removeItem("Token");
-          navigate.push(Routes.Signin.path);
-        }
-        if (err?.response.status === 404) {
-          navigate.push(Routes.NotFound.path);
-        }
-        if (err?.response.status === 500) {
-          navigate.push(Routes.ServerError.path);
-        }
-      });
+      );
+      if (res?.status === 200) {
+        setSequences((prev) => [...res?.data?.items]);
+        setSequenceNumber(res?.data?.count);
+      }
+    } catch (err) {
+      // ** no token
+      if (err?.response?.status === 401) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** expired
+      else if (err?.response?.status === 403) {
+        setAuth(null);
+        localStorage.removeItem("Token");
+        navigate.push(Routes.Signin.path);
+      }
+      // ** errors
+      else if (err?.response.status === 500) {
+        navigate.push(Routes.ServerError.path);
+      }
+    }
   };
-
-  //--------------------------------------------------------------
+  // ** pagination handlers
   const PaginatePage = (pageNumber) => {
     setRowPerPage((prev) => pageNumber);
     getClientSequence();
@@ -114,45 +117,30 @@ function SequenceContent({ clientId }) {
       setRowPerPage((prev) => prev + 1);
     }
   };
-  //---------------------------------------------------------------------
+  // ** create modal
   const [showCreateSequenceModal, setShowCreateSequenceModal] = useState(false); //Create
-  const [showDeleteSequenceModal, setShowDeleteSequenceModal] = useState(false); //Delete
-  const [showUpdateSequenceModal, setShowUpdateSequenceModal] = useState(false); //Update
-  const [showViewSequenceSteps, setShowViewSequenceSteps] = useState(false); //View
-  //---------------------------------------------------------------------
   const [showCreateSequenceToast, setShowCreateSequenceToast] = useState(false); //Create
-  const [showDeleteSequenceToast, setShowDeleteSequenceToast] = useState(false); //Delete
-  const [showUpdateSequenceToast, setShowUpdateSequenceToast] = useState(false); //Update
-  useEffect(() => {
-    if (searchedId !== null && searchedId !== 0 && searchedId !== undefined) {
-      getClientSequence();
-    }
-  }, [
-    rowPerPage,
-    showCreateSequenceModal,
-    showDeleteSequenceModal,
-    showUpdateSequenceModal,
-    showViewSequenceSteps,
-    showCreateSequenceToast,
-    showDeleteSequenceToast,
-    showUpdateSequenceToast,
-  ]);
-  //---------------------------------------------------------------------
-  const [SelectedSequence, setSelectedSequence] = useState(0);
-  //---------------------------------------------------------------------
-  const handleshowViewSequenceSteps = (SequenceSteps) => {
-    setShowViewSequenceSteps(true);
-    setSelectedSequence((prev) => SequenceSteps);
-  };
+  // ** delete modal
+  const [showDeleteSequenceModal, setShowDeleteSequenceModal] = useState(false); //Delete
   const handleDeleteSequenceModal = (id) => {
     setShowDeleteSequenceModal(true);
     setSelectedSequence((prev) => id);
   };
+  const [showDeleteSequenceToast, setShowDeleteSequenceToast] = useState(false); //Delete
+  // ** update modal
+  const [showUpdateSequenceModal, setShowUpdateSequenceModal] = useState(false); //Update
   const handleUpdateSequenceModal = (Sequence) => {
     setShowUpdateSequenceModal(true);
     setSelectedSequence((prev) => Sequence);
   };
-  //---------------------------------------------------------------------
+  const [showUpdateSequenceToast, setShowUpdateSequenceToast] = useState(false); //Update
+  // ** view modal
+  const [showViewSequenceSteps, setShowViewSequenceSteps] = useState(false); //View
+  const handleshowViewSequenceSteps = (SequenceSteps) => {
+    setShowViewSequenceSteps(true);
+    setSelectedSequence((prev) => SequenceSteps);
+  };
+  // ** ==>
   return (
     <>
       {/* ------------------------------------------------------------------------ */}
@@ -203,12 +191,13 @@ function SequenceContent({ clientId }) {
                 <th className="border-bottom">Name</th>
                 <th className="border-bottom">label</th>
                 <th className="border-bottom">Steps</th>
+                <th className="border-bottom">Created At</th>
                 <th className="border-bottom">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sequences.map((sequence) => {
-                const { id, name, label, steps } = sequence;
+                const { id, name, label, steps, createdAt } = sequence;
                 return (
                   <tr key={id}>
                     <td className="fw-normal">{id}</td>
@@ -235,6 +224,11 @@ function SequenceContent({ clientId }) {
                             />
                           </button>
                         </OverlayTrigger>
+                      </span>
+                    </td>
+                    <td>
+                      <span className="fw-normal">
+                        {new Date(createdAt).toLocaleDateString()}
                       </span>
                     </td>
                     <td>
@@ -315,6 +309,7 @@ function SequenceContent({ clientId }) {
         showCreateSequenceModal={showCreateSequenceModal}
         setShowCreateSequenceModal={setShowCreateSequenceModal}
         setShowCreateSequenceToast={setShowCreateSequenceToast}
+        refresh={getClientSequence}
       />
       <CreateSequeneToast
         showCreateSequenceToast={showCreateSequenceToast}
@@ -327,6 +322,7 @@ function SequenceContent({ clientId }) {
         setShowDeleteSequenceModal={setShowDeleteSequenceModal}
         setShowDeleteSequenceToast={setShowDeleteSequenceToast}
         SelectedSequence={SelectedSequence}
+        refresh={getClientSequence}
       />
       <DeleteSequenceToast
         showDeleteSequenceToast={showDeleteSequenceToast}
@@ -337,6 +333,7 @@ function SequenceContent({ clientId }) {
         showViewSequenceSteps={showViewSequenceSteps}
         setShowViewSequenceSteps={setShowViewSequenceSteps}
         SelectedSequence={SelectedSequence}
+        refresh={getClientSequence}
       />
 
       <UpdateSequenceModal
@@ -344,6 +341,7 @@ function SequenceContent({ clientId }) {
         setShowUpdateSequenceModal={setShowUpdateSequenceModal}
         setShowUpdateSequenceToast={setShowUpdateSequenceToast}
         SelectedSequence={SelectedSequence}
+        refresh={getClientSequence}
       />
       <UpdateSequenceToast
         showUpdateSequenceToast={showUpdateSequenceToast}
