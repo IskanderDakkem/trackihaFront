@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
-//-------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Card,
@@ -9,108 +10,88 @@ import {
   Alert,
   Spinner,
 } from "@themesberg/react-bootstrap";
-//-------------------------------------------------------
+import { FormFeedback } from "reactstrap";
+// ** API config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
 //-------------------------------------------------------
 function PasswordUpdateForm() {
+  // ** router
   const Token = localStorage.getItem("Token");
   const { Auth, setAuth } = useAuth();
   const navigate = useHistory();
-  const [loadingButton, setLoadingButton] = useState(false);
-  //-------------------------------------------------------
-  const [newPassword, setNewPassword] = useState({
+  // ** initial state
+  const initialPassword = {
     oldPassword: "",
     newPassword: "",
     confirmNewPassword: "",
+  };
+  // ** states
+  const [loadingButton, setLoadingButton] = useState(false);
+  const [newPassword, setNewPassword] = useState({
+    ...initialPassword,
   });
-  //-------------------------------------------------------
-  const onChangeNewPassword = (event) => {
+  const [errors, setErrors] = useState({});
+  const [successfully, setSuccessfully] = useState("");
+  // ** on changes
+  const onChange = (event) => {
     const { name, value } = event.target;
     setNewPassword({ ...newPassword, [name]: value });
   };
-  //-------------------------------------------------------
-  const [inputErrors, setInputErrors] = useState({});
-  const [backErrors, setBackErrors] = useState({});
-  const [successfully, setSuccessfully] = useState("");
-  //-------------------------------------------------------
-  const handleSubmitUpdatePassword = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
     setLoadingButton(false);
-    setInputErrors({});
-    setBackErrors({});
-    setInputErrors(validate(newPassword));
-    if (Object.keys(inputErrors).length === 0) {
-      setLoadingButton(true);
-      await axios
-        .put(ApiLinks.User.updatePassword + Auth, newPassword, {
-          headers: {
-            Authorization: `Bearer ${Token}`,
-          },
-        })
-        .then((res) => {
-          if (res?.status === 200) {
-            setSuccessfully("The password has been updated successfully");
-            setTimeout(() => {
-              setNewPassword({
-                oldPassword: "",
-                newPassword: "",
-                confirmNewPassword: "",
-              });
-              setSuccessfully("");
-            }, 4000);
-            window.location.reload();
-          }
-        })
-        .catch((err) => {
-          setInputErrors({});
-          if (err?.reponse?.status === 401) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.reponse?.status === 403) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.reponse?.status === 406) {
-            setBackErrors({
-              backErrors,
-              required: "all informations are required!",
-            });
-          }
-          if (err?.reponse?.status === 422) {
-            setBackErrors({
-              ...backErrors,
-              confirmNewPassword: "The two passwords don't match",
-            });
-            setNewPassword({
-              ...backErrors,
-              confirmNewPassword: "",
-            });
-          }
-          if (err?.reponse?.status === 400) {
-            setBackErrors({
-              ...backErrors,
-              oldPassword: "This password is wrong",
-            });
-            setNewPassword({
-              ...backErrors,
-              oldPassword: "",
-            });
-          }
-          if (err?.reponse?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.reponse?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
-      setLoadingButton(false);
+    setErrors({});
+    const frontErrors = validate(newPassword);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
     }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.put(
+          ApiLinks.User.updatePassword + Auth,
+          newPassword,
+          {
+            headers: {
+              Authorization: `Bearer ${Token}`,
+            },
+          }
+        );
+        if (res?.status === 200) {
+          setSuccessfully("The password has been updated successfully");
+          setTimeout(() => {
+            onReset();
+            setSuccessfully("");
+          }, 4000);
+        }
+      } catch (err) {
+        // ** failed to create
+        if (err?.response?.status === 400) {
+          setErrors({
+            confirmNewPassword:
+              "Ops! Can't delete, Something is missing please refresh the page",
+          });
+        }
+        // no token
+        else if (err?.reponse?.status === 401) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // expired
+        else if (err?.reponse?.status === 403) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // server error
+        else if (err?.reponse?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
+    }
+    setLoadingButton(false);
   };
   //-------------------------------------------------------
   const validate = (values) => {
@@ -138,6 +119,10 @@ function PasswordUpdateForm() {
     }
     return errors;
   };
+  // ** on reset
+  const onReset = () => {
+    setNewPassword({ ...initialPassword });
+  };
   //-------------------------------------------------------
   return (
     <>
@@ -153,14 +138,16 @@ function PasswordUpdateForm() {
                   placeholder="Enter your old password"
                   name="oldPassword"
                   value={newPassword?.oldPassword}
-                  onChange={onChangeNewPassword}
+                  onChange={onChange}
+                  isInvalid={errors.oldPassword && true}
+                  required
+                  autoFocus
                 />
               </Form.Group>
-              {inputErrors?.oldPassword && (
-                <Alert variant="danger">{inputErrors?.oldPassword}</Alert>
-              )}
-              {backErrors?.oldPassword && (
-                <Alert variant="danger">{backErrors?.oldPassword}</Alert>
+              {errors.oldPassword && (
+                <FormFeedback className="d-block">
+                  {errors.oldPassword}
+                </FormFeedback>
               )}
             </Col>
             <Col md={6} className="mb-3">
@@ -171,14 +158,15 @@ function PasswordUpdateForm() {
                   placeholder="Enter your company name"
                   name="newPassword"
                   value={newPassword?.newPassword}
-                  onChange={onChangeNewPassword}
+                  onChange={onChange}
+                  isInvalid={errors.newPassword && true}
+                  required
                 />
               </Form.Group>
-              {inputErrors?.newPassword && (
-                <Alert variant="danger">{inputErrors?.newPassword}</Alert>
-              )}
-              {backErrors?.newPassword && (
-                <Alert variant="danger">{backErrors?.newPassword}</Alert>
+              {errors.newPassword && (
+                <FormFeedback className="d-block">
+                  {errors.newPassword}
+                </FormFeedback>
               )}
             </Col>
             <Col md={6} className="mb-3">
@@ -189,24 +177,19 @@ function PasswordUpdateForm() {
                   placeholder="Confirm password"
                   name="confirmNewPassword"
                   value={newPassword?.confirmNewPassword}
-                  onChange={onChangeNewPassword}
+                  onChange={onChange}
+                  isInvalid={errors.confirmNewPassword && true}
+                  required
                 />
               </Form.Group>
-              {inputErrors?.confirmNewPassword && (
-                <Alert variant="danger">
-                  {inputErrors?.confirmNewPassword}
-                </Alert>
-              )}
-              {backErrors?.confirmNewPassword && (
-                <Alert variant="danger">{backErrors?.confirmNewPassword}</Alert>
+              {errors.confirmNewPassword && (
+                <FormFeedback className="d-block">
+                  {errors.confirmNewPassword}
+                </FormFeedback>
               )}
             </Col>
             <div className="mt-3">
-              <Button
-                variant="primary"
-                type="submit"
-                onClick={handleSubmitUpdatePassword}
-              >
+              <Button variant="primary" type="submit" onClick={onSubmit}>
                 {loadingButton ? (
                   <Spinner animation="border" role="status">
                     <span className="visually-hidden">Loading...</span>
@@ -219,9 +202,6 @@ function PasswordUpdateForm() {
           </Form>
           {successfully.length !== 0 && (
             <Alert variant="success">{successfully}</Alert>
-          )}
-          {backErrors.required && (
-            <Alert variant="success">{backErrors.required}</Alert>
           )}
         </Card.Body>
       </Card>

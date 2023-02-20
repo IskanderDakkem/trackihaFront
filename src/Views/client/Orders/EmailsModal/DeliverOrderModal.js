@@ -1,20 +1,21 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------------------
+// ** bootstrap imports
 import {
   Col,
   Modal,
   Button,
-  Form,
   InputGroup,
   Alert,
+  Form,
+  Spinner,
 } from "@themesberg/react-bootstrap";
-//----------------------------------------------------------------------------
-import useAuth from "../../../../Context/useAuth";
+import { FormFeedback } from "reactstrap";
+// ** api config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { Routes } from "../../../../Context/routes";
-/* import { BASE_PATH } from "../../../../Context/Axios"; */
 //----------------------------------------------------------------------------
 function DeliverOrderModal({
   setSendIsDeliveredToast,
@@ -23,14 +24,33 @@ function DeliverOrderModal({
   selectedOrder,
   refresh,
 }) {
-  const { Auth, setAuth } = useAuth();
+  // ** router
   const Token = localStorage.getItem("Token");
   const navigate = useHistory();
-  //---------------------------------------------------------------------
-  const [inputErrors, setInputErrors] = useState("");
-  const [backErrors, setBackErrors] = useState({});
-  //---------------------------------------------------------------------
+  // ** initial state
+  const intialDelivery = {
+    deliveryDate: "",
+    selectedStep: "",
+  };
+  // ** states
+  const [apiLoading, setApiLoading] = useState(false);
   const [sequenceSteps, setSequenceSteps] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [delivery, setDelivery] = useState({
+    ...intialDelivery,
+  });
+  // ** fetching data
+  useEffect(() => {
+    if (
+      sendIsDeliveredModal &&
+      selectedOrder !== 0 &&
+      selectedOrder !== null &&
+      selectedOrder !== undefined
+    ) {
+      getOrderSteps();
+    }
+  }, [sendIsDeliveredModal]);
+  // ** functions
   const getOrderSteps = async () => {
     await axios
       .get(ApiLinks.Sequence.getOrderSequenceSteps + selectedOrder.sequenceId, {
@@ -52,33 +72,24 @@ function DeliverOrderModal({
         }
       });
   };
-  useEffect(() => {
-    if (
-      selectedOrder !== 0 &&
-      selectedOrder !== null &&
-      selectedOrder !== undefined
-    ) {
-      getOrderSteps();
-    }
-  }, [sendIsDeliveredModal, selectedOrder]);
 
-  //---------------------------------------------------------------------
-  const [delivery, setDelivery] = useState({
-    deliveryDate: "",
-    selectedStep: "",
-  });
-  const onChangeDelivery = (event) => {
+  // ** on change
+  const onChange = (event) => {
     const { name, value } = event.target;
     setDelivery((prev) => ({ ...prev, [name]: value }));
   };
-  //---------------------------------------------------------------------
-  const handleDeliverOrder = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setInputErrors({});
-    setInputErrors(validate(delivery));
-    if (Object.keys.length > 0) {
-      await axios
-        .put(
+    setErrors({});
+    setApiLoading(true);
+    const frontErrors = validate(delivery);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+    }
+    if (Object.keys(frontErrors).length === 0) {
+      try {
+        const res = await axios.put(
           ApiLinks.Orders.sendIsDeliveredEmail + selectedOrder.orderId,
           delivery,
           {
@@ -86,43 +97,50 @@ function DeliverOrderModal({
               Authorization: `Bearer ${Token}`,
             },
           }
-        )
-        .then((res) => {
-          if (res?.status === 200) {
-            refresh();
-            setSendIsDeliveredModal(false);
-            setSendIsDeliveredToast(true);
-          }
-        })
-        .catch((err) => {
-          if (err?.response?.status === 400) {
-            setBackErrors((prev) => ({ ...prev, ops: "Something went wrong" }));
-          } else if (err?.response?.status === 401) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          } else if (err?.response?.status === 403) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          } else if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          } else if (err?.response?.status === 406) {
-            setBackErrors((prev) => ({
-              ...prev,
-              required: "All informations are required!",
-            }));
-          } else if (err?.response?.status === 409) {
-            setBackErrors((prev) => ({
-              ...prev,
-              failure: "Invalide delivery date",
-            }));
-          } else if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
+        );
+        if (res?.status === 200) {
+          onHide();
+          refresh();
+          setSendIsDeliveredToast(true);
+        }
+      } catch (err) {
+        // ** failed to update
+        if (err?.response?.status === 400) {
+          setErrors((prev) => ({
+            ops: "Ops! Something is missing, Please refresh the page",
+          }));
+        }
+        // ** no token
+        else if (err?.response?.status === 401) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** token expired
+        else if (err?.response?.status === 403) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // ** order not found
+        else if (err?.response?.status === 404) {
+          setErrors((prev) => ({
+            ops: "Ops! Something is missing, Please refresh the page",
+          }));
+        }
+        // ** delivery date is not valid
+        else if (err?.response?.status === 409) {
+          setErrors((prev) => ({
+            deliveryDate: "This date should be after the delivery date",
+          }));
+        }
+        // ** server error
+        else if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
     }
+    setApiLoading(false);
   };
+  // ** validate form
   const validate = (values) => {
     const errors = {};
     if (values.deliveryDate.length === 0) {
@@ -133,53 +151,61 @@ function DeliverOrderModal({
     }
     return errors;
   };
+  // ** on close
+  const onHide = () => {
+    setSendIsDeliveredModal(false);
+    setDelivery({ ...intialDelivery });
+    setErrors({});
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={sendIsDeliveredModal}
-      onHide={() => setSendIsDeliveredModal(false)}
+      onHide={onHide}
     >
-      <form>
-        <Modal.Header>
-          <Button
-            variant="close"
-            aria-label="Close"
-            onClick={() => setSendIsDeliveredModal(false)}
-          />
-        </Modal.Header>
-        <Modal.Body>
+      <Modal.Header>
+        <Button variant="close" aria-label="Close" onClick={onHide} />
+      </Modal.Header>
+      <Modal.Body>
+        <Form onSubmit={onSubmit}>
           <h5 className="mb-4 text-capitalize">
             Set this order to be delivered ?
           </h5>
           <p>The company will receive an email that this order we delivered</p>
 
-          <Col>
+          <Col className="mb-3">
             <Form.Group>
               <Form.Label>Select the delivery day</Form.Label>
               <InputGroup>
                 <Form.Control
                   type="date"
                   name="deliveryDate"
-                  onChange={onChangeDelivery}
+                  onChange={onChange}
+                  isInvalid={errors.deliveryDate && true}
                   required
+                  autoFocus
                 />
               </InputGroup>
             </Form.Group>
+            {errors.deliveryDate && (
+              <FormFeedback className="d-block">
+                {errors.deliveryDate}
+              </FormFeedback>
+            )}
           </Col>
-          {inputErrors.deliveryDate && (
-            <Alert variant="danger">{inputErrors.deliveryDate}</Alert>
-          )}
-          <Col className="mt-1">
+
+          <Col className="mb-3">
             <Form.Group>
               <Form.Label>Select the delivery day</Form.Label>
               <Form.Select
                 name="selectedStep"
-                onChange={onChangeDelivery}
+                onChange={onChange}
                 value={delivery?.selectedStep}
                 required
               >
-                <option defaultValue>Open this select menu</option>
+                <option>Open this select menu</option>
                 {sequenceSteps.map((step) => {
                   return (
                     <option key={step.id} value={step.id}>
@@ -189,36 +215,40 @@ function DeliverOrderModal({
                 })}
               </Form.Select>
             </Form.Group>
+            {errors.selectedStep && (
+              <FormFeedback className="d-block">
+                {errors.selectedStep}
+              </FormFeedback>
+            )}
           </Col>
-          {inputErrors.selectedStep && (
-            <Alert variant="danger">{inputErrors.selectedStep}</Alert>
+          {errors.ops && (
+            <Alert variant="danger" className="my-2">
+              {errors.ops}
+            </Alert>
           )}
-          {backErrors.ops && <Alert variant="danger">{backErrors.ops}</Alert>}
-          {backErrors.required && (
-            <Alert variant="danger">{backErrors.required}</Alert>
-          )}
-          {backErrors.failure && (
-            <Alert variant="danger">{backErrors.failure}</Alert>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="link"
-            className="text-white ms-auto btn btn-danger"
-            onClick={() => setSendIsDeliveredModal(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit  "
-            variant="secondary"
-            onClick={handleDeliverOrder}
-            className="btn btn-success"
-          >
-            Confirm
-          </Button>
-        </Modal.Footer>
-      </form>
+          <Col xs={12} className="text-center mt-4 mb-3 pt-50">
+            <Button
+              variant="link"
+              className="text-white ms-auto btn btn-danger me-2"
+              onClick={onHide}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              className="btn btn-success"
+              type="submit"
+            >
+              {apiLoading ? (
+                <Spinner animation="border" variant="dark" />
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </Col>
+        </Form>
+      </Modal.Body>
     </Modal>
   );
 }

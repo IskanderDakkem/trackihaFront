@@ -1,36 +1,27 @@
+// ** react imports
 import React from "react";
-import { useHistory } from "react-router-dom";
-//----------------------------------------------------------------------------
-import {
-  Table,
-  Col,
-  Modal,
-  Button,
-  Form,
-  InputGroup,
-  Spinner,
-  Alert,
-} from "@themesberg/react-bootstrap";
+// ** bootstrap imports
+import { Table, Modal, Button } from "@themesberg/react-bootstrap";
 //----------------------------------------------------------------------------
 function SendEmailModal({
   showSendEmailModal,
   setShowSendEmaiModal,
   selectedOrder,
 }) {
+  const onHide = () => {
+    setShowSendEmaiModal(false);
+  };
+  // ** ==>
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showSendEmailModal}
-      onHide={() => setShowSendEmaiModal(false)}
+      onHide={onHide}
       className="w-100"
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowSendEmaiModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
         <h5 className="mb-4 text-capitalize">Email status</h5>

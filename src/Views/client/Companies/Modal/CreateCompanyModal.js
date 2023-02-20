@@ -14,7 +14,7 @@ import {
 } from "@themesberg/react-bootstrap";
 import { FormFeedback } from "reactstrap";
 //---------------------------------------------------------------------
-//**Api config */
+//** Api config
 import axios from "../../../../Context/Axios";
 import ApiLinks from "../../../../Context/ApiLinks";
 import { Routes } from "../../../../Context/routes";

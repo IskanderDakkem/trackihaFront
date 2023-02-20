@@ -1,11 +1,7 @@
+// ** React imports
 import React from "react";
-import {
-  Modal,
-  Button,
-  Form,
-  Col,
-  InputGroup,
-} from "@themesberg/react-bootstrap";
+// ** bootstrap imports
+import { Modal, Button, Form, Col } from "@themesberg/react-bootstrap";
 //-----------------------------------------------------------------
 function ViewCompanyModal({
   showViewCompanyModal,
@@ -26,19 +22,19 @@ function ViewCompanyModal({
     createdAt,
     updatedAt,
   } = SelectedCompany;
+  // ** on close
+  const onHide = () => {
+    setShowViewCompanyModal(false);
+  };
   return (
     <Modal
       as={Modal.Dialog}
       centered
       show={showViewCompanyModal}
-      onHide={() => setShowViewCompanyModal(false)}
+      onHide={onHide}
     >
       <Modal.Header>
-        <Button
-          variant="close"
-          aria-label="Close"
-          onClick={() => setShowViewCompanyModal(false)}
-        />
+        <Button variant="close" aria-label="Close" onClick={onHide} />
       </Modal.Header>
       <Modal.Body>
         <h5 className="mb-4">Company detailes</h5>

@@ -24,6 +24,7 @@ function SendSuiviEmailModal({
   setSendSuiviEmailModal,
   setSendSuiviEmailToast,
   selectedOrder,
+  refresh,
 }) {
   const navigate = useHistory();
   const { Auth, setAuth } = useAuth();

@@ -1,6 +1,7 @@
+// ** react imports
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-//-------------------------------------------------------
+// **  bootstrap imports
 import {
   Col,
   Card,
@@ -9,19 +10,36 @@ import {
   Alert,
   Spinner,
 } from "@themesberg/react-bootstrap";
-//-------------------------------------------------------
+import { FormFeedback } from "reactstrap";
+// ** api config
 import { Routes } from "../../../Context/routes";
 import ApiLinks from "../../../Context/ApiLinks";
 import axios from "../../../Context/Axios";
 import useAuth from "../../../Context/useAuth";
 //-------------------------------------------------------
 function EmailUpdateForm() {
+  // ** router
   const Token = localStorage.getItem("Token");
   const { Auth, setAuth } = useAuth();
   const navigate = useHistory();
+  // ** initial states
+  const intialEmail = {
+    newEmail: "",
+    confirmNewEmail: "",
+  };
+  // ** states
   const [loadingButton, setLoadingButton] = useState(false);
-  //-------------------------------------------------------
   const [userInfo, setUserInfo] = useState({});
+  const [newEmail, setNewEmail] = useState({ ...intialEmail });
+  const [successfully, setSuccessfully] = useState(""); //successfully updated
+  const [errors, setErrors] = useState({});
+  // ** fetching data
+  useEffect(() => {
+    if (Auth !== null && Auth !== undefined && Auth !== 0) {
+      getUserInfo();
+    }
+  }, []);
+  // ** functions
   const getUserInfo = async () => {
     await axios
       .get(ApiLinks.User.getUser + Auth, {
@@ -58,122 +76,108 @@ function EmailUpdateForm() {
         }
       });
   };
-  useEffect(() => {
-    if (Auth !== null && Auth !== undefined && Auth !== 0) {
-      getUserInfo();
-    }
-  }, []);
-  //-------------------------------------------------------
-  const [newEmail, setNewEmail] = useState({
-    newEmail: "",
-    confirmNewEmail: "",
-  });
-  const onChangeNewEmail = (event) => {
+  // ** on Change
+  const onChange = (event) => {
     const { name, value } = event.target;
     setNewEmail({ ...newEmail, [name]: value });
   };
-  //-------------------------------------------------------
-  const [inputErrors, setInputErrors] = useState({}); //Front errors
-  const [backErrors, setBackErrors] = useState({}); //Back errors
-  const [successfully, setSuccessfully] = useState(""); //successfully updated
-  //-------------------------------------------------------
-  const handleSubmitUpdateEmail = async (event) => {
+  // ** on submit
+  const onSubmit = async (event) => {
     event.preventDefault();
-    setInputErrors({});
-    setBackErrors({});
-    setInputErrors(validate(newEmail));
-    if (Object.keys(inputErrors).length === 0) {
-      setLoadingButton(true);
-      await axios
-        .put(ApiLinks.User.updateEmail + Auth, newEmail, {
-          headers: {
-            Authorization: `Bearer ${Token}`,
-          },
-        })
-        .then((res) => {
-          if (res?.status === 200) {
-            setSuccessfully("The email has been updated successfully");
-            setTimeout(() => {
-              setNewEmail({
-                newEmail: "",
-                confirmNewEmail: "",
-              });
-              setSuccessfully("");
-            }, 4000);
-            window.location.reload();
-          }
-        })
-        .catch((err) => {
-          setInputErrors({});
-          if (err?.response?.status === 400) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 401) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 403) {
-            setAuth(null);
-            localStorage.removeItem("Token");
-            navigate.push(Routes.Signin.path);
-          }
-          if (err?.response?.status === 406) {
-            setBackErrors({
-              backErrors,
-              required: "all informations are required!",
-            });
-          }
-          if (err?.response?.status === 422) {
-            setBackErrors({
-              ...backErrors,
-              confirmNewEmail: "The two emails don't match",
-            });
-            setNewEmail({
-              ...backErrors,
-              confirmNewEmail: "",
-            });
-          }
-          if (err?.response?.status === 404) {
-            navigate.push(Routes.NotFound.path);
-          }
-          if (err?.response?.status === 500) {
-            navigate.push(Routes.ServerError.path);
-          }
-        });
-      setLoadingButton(false);
+    setErrors({});
+    setLoadingButton(true);
+    console.log("reacehd here");
+    const frontErrors = validate(newEmail);
+    if (Object.keys(frontErrors).length > 0) {
+      setErrors({ ...frontErrors });
+      console.log("here ?");
     }
+    if (Object.keys(frontErrors).length === 0) {
+      console.log("No, Here ?");
+      try {
+        const res = await axios.put(
+          ApiLinks.User.updateEmail + Auth,
+          newEmail,
+          {
+            headers: {
+              Authorization: `Bearer ${Token}`,
+            },
+          }
+        );
+        if (res?.status === 200) {
+          setSuccessfully("Email was updated successfully");
+          onReset();
+          // content
+        }
+      } catch (err) {
+        // failed
+        if (err?.response?.status === 400) {
+          setErrors({
+            confirmNewEmail:
+              "Ops! Can't update something is missing, Please refresh the page",
+          });
+        }
+        // no token
+        else if (err?.response?.status === 401) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // expired
+        else if (err?.response?.status === 403) {
+          localStorage.removeItem("Token");
+          navigate.push(Routes.Signin.path);
+        }
+        // email already used
+        if (err?.response?.status === 409) {
+          setErrors({
+            confirmNewEmail: "This email is already used",
+          });
+        }
+        if (err?.response?.status === 500) {
+          navigate.push(Routes.ServerError.path);
+        }
+      }
+    }
+    setLoadingButton(false);
   };
-  //-------------------------------------------------------
+  // ** validate form
   const validate = (values) => {
     const errors = {};
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-    if (!values.newEmail) {
+    // exist
+    if (values.newEmail === "") {
       errors.newEmail = "Email is required!";
-    } else if (!regex.test(values.newEmail)) {
+    }
+    // format
+    else if (!regex.test(values.newEmail)) {
       errors.newEmail = "This is not a valid email format!";
     }
-
-    if (!values.confirmNewEmail) {
+    // exist
+    if (!values.confirmNewEmail === "") {
       errors.confirmNewEmail = "Email is required!";
-    } else if (!regex.test(values.newEmail)) {
+    }
+    // format
+    else if (!regex.test(values.newEmail)) {
       errors.confirmNewEmail = "This is not a valid email format!";
     }
-
+    // matching
     if (values.newEmail !== values.confirmNewEmail) {
       errors.confirmNewEmail = "Two email don't match!";
     }
     return errors;
   };
-  //-------------------------------------------------------
+  // ** on reset
+  const onReset = () => {
+    setNewEmail({ ...intialEmail });
+    setErrors({});
+  };
+  // ** ==>
   return (
     <>
       <Card border="light" className="bg-white shadow-sm mb-4">
         <Card.Body>
           <h5 className="mb-4">Update Email</h5>
-          <Form>
+          <Form onSubmit={onSubmit}>
             <Col md={6} className="mb-3">
               <Form.Group>
                 <Form.Label>New Email</Form.Label>
@@ -182,14 +186,15 @@ function EmailUpdateForm() {
                   placeholder={`${userInfo?.Email}`}
                   name="newEmail"
                   value={newEmail?.newEmail}
-                  onChange={onChangeNewEmail}
+                  onChange={onChange}
+                  isInvalid={errors.newEmail && true}
+                  required
                 />
               </Form.Group>
-              {inputErrors?.newEmail && (
-                <Alert variant="danger">{inputErrors?.newEmail}</Alert>
-              )}
-              {backErrors?.newEmail && (
-                <Alert variant="danger">{backErrors?.newEmail}</Alert>
+              {errors.newEmail && (
+                <FormFeedback className="d-block">
+                  {errors.newEmail}
+                </FormFeedback>
               )}
             </Col>
             <Col md={6} className="mb-3">
@@ -200,22 +205,20 @@ function EmailUpdateForm() {
                   placeholder="Confirm your new email"
                   name="confirmNewEmail"
                   value={newEmail?.confirmNewEmail}
-                  onChange={onChangeNewEmail}
+                  onChange={onChange}
+                  isInvalid={errors.confirmNewEmail && true}
+                  required
+                  autoFocus
                 />
               </Form.Group>
-              {inputErrors?.confirmNewEmail && (
-                <Alert variant="danger">{inputErrors?.confirmNewEmail}</Alert>
-              )}
-              {backErrors?.confirmNewEmail && (
-                <Alert variant="danger">{backErrors?.confirmNewEmail}</Alert>
+              {errors.confirmNewEmail && (
+                <FormFeedback className="d-block">
+                  {errors.confirmNewEmail}
+                </FormFeedback>
               )}
             </Col>
             <div className="mt-3">
-              <Button
-                variant="primary"
-                type="submit"
-                onClick={handleSubmitUpdateEmail}
-              >
+              <Button variant="primary" type="submit" className="mt-1">
                 {loadingButton ? (
                   <Spinner animation="border" role="status">
                     <span className="visually-hidden">Loading...</span>
@@ -228,9 +231,6 @@ function EmailUpdateForm() {
           </Form>
           {successfully.length !== 0 && (
             <Alert variant="success">{successfully}</Alert>
-          )}
-          {backErrors.required && (
-            <Alert variant="success">{backErrors.required}</Alert>
           )}
         </Card.Body>
       </Card>
